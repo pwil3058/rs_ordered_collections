@@ -99,13 +99,25 @@ impl<T: Ord> ListSet<T> {
     }
 
     pub fn is_disjoint(&self, other: &Self) -> bool {
-        let mut i_s = 0;
-        let mut i_o = 0;
-        while i_s < self.ordered_list.len() && i_o < other.ordered_list.len() {
-            match self.ordered_list[i_s].cmp(&other.ordered_list[i_o]) {
-                Ordering::Less => i_s += 1,
-                Ordering::Greater => i_o += 1,
-                Ordering::Equal => return false,
+        let mut self_iter = self.ordered_list.iter();
+        let mut other_iter = other.ordered_list.iter();
+        let mut o_self_cur_item = self_iter.next();
+        let mut o_other_cur_item = other_iter.next();
+        while let Some(self_cur_item) = o_self_cur_item {
+            if let Some(other_cur_item) = o_other_cur_item {
+                match self_cur_item.cmp(&other_cur_item) {
+                    Ordering::Less => {
+                        o_self_cur_item = self_iter.next();
+                    }
+                    Ordering::Greater => {
+                        o_other_cur_item = other_iter.next();
+                    }
+                    Ordering::Equal => {
+                        return false;
+                    }
+                }
+            } else {
+                return true;
             }
         }
         true
@@ -129,6 +141,54 @@ impl<T: Ord> FromIterator<T> for ListSet<T> {
         }
 
         list_set
+    }
+}
+
+pub struct Difference<'a, T: Ord> {
+    o_lh_cur_item: Option<&'a T>,
+    o_rh_cur_item: Option<&'a T>,
+    lh_iter: Iter<'a, T>,
+    rh_iter: Iter<'a, T>,
+}
+
+impl<T: Ord> ListSet<T> {
+    pub fn difference<'a>(&'a self, other: &'a Self) -> Difference<'a, T> {
+        let mut self_iter = self.ordered_list.iter();
+        let mut other_iter = other.ordered_list.iter();
+        Difference::<T> {
+            o_lh_cur_item: self_iter.next(),
+            o_rh_cur_item: other_iter.next(),
+            lh_iter: self_iter,
+            rh_iter: other_iter,
+        }
+    }
+}
+
+impl<'a, T: Ord> Iterator for Difference<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(lh_cur_item) = self.o_lh_cur_item {
+            if let Some(rh_cur_item) = self.o_rh_cur_item {
+                match lh_cur_item.cmp(&rh_cur_item) {
+                    Ordering::Less => {
+                        self.o_lh_cur_item = self.lh_iter.next();
+                        return Some(lh_cur_item);
+                    }
+                    Ordering::Greater => {
+                        self.o_rh_cur_item = self.rh_iter.next();
+                    }
+                    Ordering::Equal => {
+                        self.o_lh_cur_item = self.lh_iter.next();
+                        self.o_rh_cur_item = self.rh_iter.next();
+                    }
+                }
+            } else {
+                self.o_lh_cur_item = self.lh_iter.next();
+                return Some(lh_cur_item);
+            }
+        }
+        None
     }
 }
 
@@ -235,10 +295,12 @@ mod tests {
 
     #[test]
     fn test_is_disjoint() {
-        let str_set1: ListSet<String> = TEST_STRS[0..5].into_iter().map(|s| s.to_string()).collect();
+        let str_set1: ListSet<String> =
+            TEST_STRS[0..5].into_iter().map(|s| s.to_string()).collect();
         let str_set2: ListSet<String> = TEST_STRS[5..].into_iter().map(|s| s.to_string()).collect();
         assert!(str_set1.is_disjoint(&str_set2));
-        let str_set1: ListSet<String> = TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        let str_set1: ListSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
         let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         assert!(!str_set1.is_disjoint(&str_set2));
 
@@ -249,5 +311,20 @@ mod tests {
         let set1: ListSet<u64> = u64_seq[0..700].iter().map(|u| *u).collect();
         let set2: ListSet<u64> = u64_seq[300..].iter().map(|u| *u).collect();
         assert!(!set1.is_disjoint(&set2));
+    }
+
+    #[test]
+    fn test_difference() {
+        let str_set1: ListSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let expected: ListSet<String> =
+            TEST_STRS[0..4].into_iter().map(|s| s.to_string()).collect();
+        let mut count = 0;
+        for item in str_set1.difference(&str_set2) {
+            count += 1;
+            assert!(expected.contains(item));
+        }
+        assert_eq!(count, expected.len());
     }
 }
