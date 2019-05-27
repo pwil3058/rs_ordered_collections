@@ -18,6 +18,7 @@
 
 extern crate rand;
 
+use std::cmp::Ordering;
 use std::default::Default;
 use std::iter::FromIterator;
 use std::slice::Iter;
@@ -92,6 +93,19 @@ impl<T: Ord> ListSet<T> {
         for i in 1..self.ordered_list.len() {
             if self.ordered_list[i - 1] >= self.ordered_list[i] {
                 return false;
+            }
+        }
+        true
+    }
+
+    pub fn is_disjoint(&self, other: &Self) -> bool {
+        let mut i_s = 0;
+        let mut i_o = 0;
+        while i_s < self.ordered_list.len() && i_o < other.ordered_list.len() {
+            match self.ordered_list[i_s].cmp(&other.ordered_list[i_o]) {
+                Ordering::Less => i_s += 1,
+                Ordering::Greater => i_o += 1,
+                Ordering::Equal => return false,
             }
         }
         true
@@ -217,5 +231,23 @@ mod tests {
         assert!(str_set2.remove(&TEST_STRS.first().unwrap().to_string()));
         assert!(str_set1 != str_set2);
         assert!(calculate_hash(&str_set1) != calculate_hash(&str_set2));
+    }
+
+    #[test]
+    fn test_is_disjoint() {
+        let str_set1: ListSet<String> = TEST_STRS[0..5].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: ListSet<String> = TEST_STRS[5..].into_iter().map(|s| s.to_string()).collect();
+        assert!(str_set1.is_disjoint(&str_set2));
+        let str_set1: ListSet<String> = TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        assert!(!str_set1.is_disjoint(&str_set2));
+
+        let u64_seq = random_sequence(1000);
+        let set1: ListSet<u64> = u64_seq[0..500].iter().map(|u| *u).collect();
+        let set2: ListSet<u64> = u64_seq[500..].iter().map(|u| *u).collect();
+        assert!(set1.is_disjoint(&set2));
+        let set1: ListSet<u64> = u64_seq[0..700].iter().map(|u| *u).collect();
+        let set2: ListSet<u64> = u64_seq[300..].iter().map(|u| *u).collect();
+        assert!(!set1.is_disjoint(&set2));
     }
 }
