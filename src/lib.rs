@@ -123,6 +123,32 @@ impl<T: Ord> ListSet<T> {
         }
         true
     }
+
+    pub fn is_subset(&self, other: &Self) -> bool {
+        let mut self_iter = self.ordered_list.iter();
+        let mut other_iter = other.ordered_list.iter();
+        let mut o_self_cur_item = self_iter.next();
+        let mut o_other_cur_item = other_iter.next();
+        while let Some(self_cur_item) = o_self_cur_item {
+            if let Some(other_cur_item) = o_other_cur_item {
+                match self_cur_item.cmp(&other_cur_item) {
+                    Ordering::Less => {
+                        o_self_cur_item = self_iter.next();
+                    }
+                    Ordering::Greater => {
+                        return false;
+                    }
+                    Ordering::Equal => {
+                        o_self_cur_item = self_iter.next();
+                        o_other_cur_item = other_iter.next();
+                    }
+                }
+            } else {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 impl<T: Ord> Default for ListSet<T> {
@@ -445,6 +471,18 @@ mod tests {
         let set1: ListSet<u64> = u64_seq[0..700].iter().map(|u| *u).collect();
         let set2: ListSet<u64> = u64_seq[300..].iter().map(|u| *u).collect();
         assert!(!set1.is_disjoint(&set2));
+    }
+
+    #[test]
+    fn test_is_subset() {
+        let set1: ListSet<String> = TEST_STRS[0..7].into_iter().map(|s| s.to_string()).collect();
+        let set2: ListSet<String> = TEST_STRS[7..].into_iter().map(|s| s.to_string()).collect();
+        let set3: ListSet<String> = TEST_STRS[5..].into_iter().map(|s| s.to_string()).collect();
+        assert!(!set1.is_subset(&set2));
+        assert!(!set1.is_subset(&set3));
+        assert!(!set2.is_subset(&set3));
+        assert!(set1.is_subset(&set1));
+        assert!(set3.is_subset(&set2));
     }
 
     #[test]
