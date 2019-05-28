@@ -21,7 +21,7 @@ extern crate rand;
 use std::cmp::Ordering;
 use std::default::Default;
 use std::iter::FromIterator;
-use std::ops::Sub;
+use std::ops::{BitXor, Sub};
 use std::slice::Iter;
 use std::vec::Drain;
 
@@ -157,33 +157,41 @@ impl<'a, T:'a + Ord + Clone> FromIterator<&'a T> for ListSet<T> {
     }
 }
 
-pub struct Difference<'a, T: Ord> {
-    o_lh_cur_item: Option<&'a T>,
-    o_rh_cur_item: Option<&'a T>,
-    lh_iter: Iter<'a, T>,
-    rh_iter: Iter<'a, T>,
+macro_rules! define_set_operation {
+    ( $iter:ident, $function:ident, $op:ident, $op_fn:ident  ) => {
+        //{
+            pub struct $iter<'a, T: Ord> {
+                o_lh_cur_item: Option<&'a T>,
+                o_rh_cur_item: Option<&'a T>,
+                lh_iter: Iter<'a, T>,
+                rh_iter: Iter<'a, T>,
+            }
+
+            impl<T: Ord> ListSet<T> {
+                pub fn $function<'a>(&'a self, other: &'a Self) -> $iter<'a, T> {
+                    let mut self_iter = self.ordered_list.iter();
+                    let mut other_iter = other.ordered_list.iter();
+                    $iter::<T> {
+                        o_lh_cur_item: self_iter.next(),
+                        o_rh_cur_item: other_iter.next(),
+                        lh_iter: self_iter,
+                        rh_iter: other_iter,
+                    }
+                }
+            }
+
+            impl<T: Ord + Clone> $op for ListSet<T> {
+                type Output = Self;
+
+                fn $op_fn(self, other:Self) -> Self::Output {
+                    self.$function(&other).collect()
+                }
+            }
+        //}
+    };
 }
 
-impl<T: Ord> ListSet<T> {
-    pub fn difference<'a>(&'a self, other: &'a Self) -> Difference<'a, T> {
-        let mut self_iter = self.ordered_list.iter();
-        let mut other_iter = other.ordered_list.iter();
-        Difference::<T> {
-            o_lh_cur_item: self_iter.next(),
-            o_rh_cur_item: other_iter.next(),
-            lh_iter: self_iter,
-            rh_iter: other_iter,
-        }
-    }
-}
-
-impl<T: Ord + Clone> Sub for ListSet<T> {
-    type Output = Self;
-
-    fn sub(self, other:Self) -> Self::Output {
-        self.difference(&other).collect()
-    }
-}
+define_set_operation!(Difference, difference, Sub, sub);
 
 impl<'a, T: Ord> Iterator for Difference<'a, T> {
     type Item = &'a T;
@@ -210,6 +218,43 @@ impl<'a, T: Ord> Iterator for Difference<'a, T> {
             }
         }
         None
+    }
+}
+
+define_set_operation!(SymmetricDifference, symmetric_difference, BitXor, bitxor);
+
+impl<'a, T: Ord> Iterator for SymmetricDifference<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(lh_cur_item) = self.o_lh_cur_item {
+                if let Some(rh_cur_item) = self.o_rh_cur_item {
+                    match lh_cur_item.cmp(&rh_cur_item) {
+                        Ordering::Less => {
+                            self.o_lh_cur_item = self.lh_iter.next();
+                            return Some(lh_cur_item);
+                        }
+                        Ordering::Greater => {
+                            self.o_rh_cur_item = self.rh_iter.next();
+                            return Some(rh_cur_item)
+                        }
+                        Ordering::Equal => {
+                            self.o_lh_cur_item = self.lh_iter.next();
+                            self.o_rh_cur_item = self.rh_iter.next();
+                        }
+                    }
+                } else {
+                    self.o_lh_cur_item = self.lh_iter.next();
+                    return Some(lh_cur_item);
+                }
+            } else if let Some(rh_cur_item) = self.o_rh_cur_item {
+                self.o_rh_cur_item = self.rh_iter.next();
+                return Some(rh_cur_item)
+            } else {
+                return None;
+            }
+        }
     }
 }
 
@@ -341,13 +386,21 @@ mod tests {
         let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         let expected: ListSet<String> =
             TEST_STRS[0..4].into_iter().map(|s| s.to_string()).collect();
-        let mut count = 0;
-        for item in str_set1.difference(&str_set2) {
-            count += 1;
-            assert!(expected.contains(item));
-        }
-        assert_eq!(count, expected.len());
         let result = str_set1 - str_set2;
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn test_symmetric_difference() {
+        let str_set1: ListSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let mut expected: ListSet<String> =
+            TEST_STRS[0..4].into_iter().map(|s| s.to_string()).collect();
+        for item in TEST_STRS[8..].into_iter().map(|s| s.to_string()) {
+            expected.insert(item);
+        }
+        let result = str_set1 ^ str_set2;
         assert_eq!(expected, result);
     }
 }
