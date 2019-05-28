@@ -21,6 +21,7 @@ extern crate rand;
 use std::cmp::Ordering;
 use std::default::Default;
 use std::iter::FromIterator;
+use std::ops::Sub;
 use std::slice::Iter;
 use std::vec::Drain;
 
@@ -144,6 +145,18 @@ impl<T: Ord> FromIterator<T> for ListSet<T> {
     }
 }
 
+impl<'a, T:'a + Ord + Clone> FromIterator<&'a T> for ListSet<T> {
+    fn from_iter<I: IntoIterator<Item = &'a T>>(iter: I) -> Self {
+        let mut list_set = ListSet::<T>::default();
+
+        for i in iter.into_iter().cloned() {
+            list_set.insert(i);
+        }
+
+        list_set
+    }
+}
+
 pub struct Difference<'a, T: Ord> {
     o_lh_cur_item: Option<&'a T>,
     o_rh_cur_item: Option<&'a T>,
@@ -161,6 +174,14 @@ impl<T: Ord> ListSet<T> {
             lh_iter: self_iter,
             rh_iter: other_iter,
         }
+    }
+}
+
+impl<T: Ord + Clone> Sub for ListSet<T> {
+    type Output = Self;
+
+    fn sub(self, other:Self) -> Self::Output {
+        self.difference(&other).collect()
     }
 }
 
@@ -326,5 +347,7 @@ mod tests {
             assert!(expected.contains(item));
         }
         assert_eq!(count, expected.len());
+        let result = str_set1 - str_set2;
+        assert_eq!(expected, result);
     }
 }
