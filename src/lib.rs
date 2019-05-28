@@ -85,6 +85,15 @@ impl<T: Ord> ListSet<T> {
         self.ordered_list.iter()
     }
 
+    // Return an iterator over the items in the set that occur after the
+    // given item in the sorting order
+    pub fn iter_after(&self, item: &T) -> Iter<T> {
+        match self.ordered_list.binary_search(item) {
+            Ok(index) => self.ordered_list[index + 1..].iter(),
+            Err(index) => self.ordered_list[index..].iter(),
+        }
+    }
+
     pub fn drain(&mut self) -> Drain<T> {
         self.ordered_list.drain(..)
     }
@@ -124,6 +133,7 @@ impl<T: Ord> ListSet<T> {
         true
     }
 
+    // return true if self is a subset of other
     pub fn is_subset(&self, other: &Self) -> bool {
         let mut self_iter = self.ordered_list.iter();
         let mut other_iter = other.ordered_list.iter();
@@ -430,6 +440,19 @@ mod tests {
             assert!(u64_seq.contains(u));
         }
         assert_eq!(u64_seq.len(), u64_set.len());
+    }
+
+    #[test]
+    fn iter_after_works() {
+        let str_set: ListSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
+        for item in str_set.iter_after(&"jjj".to_string()) {
+            assert!(item > &"jjj".to_string());
+            assert!(TEST_STRS.contains(&item.as_str()));
+        }
+        for item in str_set.iter_after(&"zzz".to_string()) {
+            assert!(item > &"zzz".to_string());
+            assert!(false);
+        }
     }
 
     #[test]
