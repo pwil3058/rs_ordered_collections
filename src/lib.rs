@@ -21,7 +21,7 @@ extern crate rand;
 use std::cmp::Ordering;
 use std::default::Default;
 use std::iter::FromIterator;
-use std::ops::{BitOr, BitXor, Sub};
+use std::ops::{BitAnd, BitOr, BitXor, Sub};
 use std::slice::Iter;
 use std::vec::Drain;
 
@@ -145,7 +145,7 @@ impl<T: Ord> FromIterator<T> for ListSet<T> {
     }
 }
 
-impl<'a, T:'a + Ord + Clone> FromIterator<&'a T> for ListSet<T> {
+impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for ListSet<T> {
     fn from_iter<I: IntoIterator<Item = &'a T>>(iter: I) -> Self {
         let mut list_set = ListSet::<T>::default();
 
@@ -159,35 +159,33 @@ impl<'a, T:'a + Ord + Clone> FromIterator<&'a T> for ListSet<T> {
 
 macro_rules! define_set_operation {
     ( $iter:ident, $function:ident, $op:ident, $op_fn:ident  ) => {
-        //{
-            pub struct $iter<'a, T: Ord> {
-                o_lh_cur_item: Option<&'a T>,
-                o_rh_cur_item: Option<&'a T>,
-                lh_iter: Iter<'a, T>,
-                rh_iter: Iter<'a, T>,
-            }
+        pub struct $iter<'a, T: Ord> {
+            o_lh_cur_item: Option<&'a T>,
+            o_rh_cur_item: Option<&'a T>,
+            lh_iter: Iter<'a, T>,
+            rh_iter: Iter<'a, T>,
+        }
 
-            impl<T: Ord> ListSet<T> {
-                pub fn $function<'a>(&'a self, other: &'a Self) -> $iter<'a, T> {
-                    let mut self_iter = self.ordered_list.iter();
-                    let mut other_iter = other.ordered_list.iter();
-                    $iter::<T> {
-                        o_lh_cur_item: self_iter.next(),
-                        o_rh_cur_item: other_iter.next(),
-                        lh_iter: self_iter,
-                        rh_iter: other_iter,
-                    }
+        impl<T: Ord> ListSet<T> {
+            pub fn $function<'a>(&'a self, other: &'a Self) -> $iter<'a, T> {
+                let mut self_iter = self.ordered_list.iter();
+                let mut other_iter = other.ordered_list.iter();
+                $iter::<T> {
+                    o_lh_cur_item: self_iter.next(),
+                    o_rh_cur_item: other_iter.next(),
+                    lh_iter: self_iter,
+                    rh_iter: other_iter,
                 }
             }
+        }
 
-            impl<T: Ord + Clone> $op for ListSet<T> {
-                type Output = Self;
+        impl<T: Ord + Clone> $op for ListSet<T> {
+            type Output = Self;
 
-                fn $op_fn(self, other:Self) -> Self::Output {
-                    self.$function(&other).collect()
-                }
+            fn $op_fn(self, other: Self) -> Self::Output {
+                self.$function(&other).collect()
             }
-        //}
+        }
     };
 }
 
@@ -237,7 +235,7 @@ impl<'a, T: Ord> Iterator for SymmetricDifference<'a, T> {
                         }
                         Ordering::Greater => {
                             self.o_rh_cur_item = self.rh_iter.next();
-                            return Some(rh_cur_item)
+                            return Some(rh_cur_item);
                         }
                         Ordering::Equal => {
                             self.o_lh_cur_item = self.lh_iter.next();
@@ -250,7 +248,7 @@ impl<'a, T: Ord> Iterator for SymmetricDifference<'a, T> {
                 }
             } else if let Some(rh_cur_item) = self.o_rh_cur_item {
                 self.o_rh_cur_item = self.rh_iter.next();
-                return Some(rh_cur_item)
+                return Some(rh_cur_item);
             } else {
                 return None;
             }
@@ -274,7 +272,7 @@ impl<'a, T: Ord> Iterator for Union<'a, T> {
                         }
                         Ordering::Greater => {
                             self.o_rh_cur_item = self.rh_iter.next();
-                            return Some(rh_cur_item)
+                            return Some(rh_cur_item);
                         }
                         Ordering::Equal => {
                             self.o_lh_cur_item = self.lh_iter.next();
@@ -288,7 +286,39 @@ impl<'a, T: Ord> Iterator for Union<'a, T> {
                 }
             } else if let Some(rh_cur_item) = self.o_rh_cur_item {
                 self.o_rh_cur_item = self.rh_iter.next();
-                return Some(rh_cur_item)
+                return Some(rh_cur_item);
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+define_set_operation!(Intersection, intersection, BitAnd, bitand);
+
+impl<'a, T: Ord> Iterator for Intersection<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(lh_cur_item) = self.o_lh_cur_item {
+                if let Some(rh_cur_item) = self.o_rh_cur_item {
+                    match lh_cur_item.cmp(&rh_cur_item) {
+                        Ordering::Less => {
+                            self.o_lh_cur_item = self.lh_iter.next();
+                        }
+                        Ordering::Greater => {
+                            self.o_rh_cur_item = self.rh_iter.next();
+                        }
+                        Ordering::Equal => {
+                            self.o_lh_cur_item = self.lh_iter.next();
+                            self.o_rh_cur_item = self.rh_iter.next();
+                            return Some(lh_cur_item);
+                        }
+                    }
+                } else {
+                    return None;
+                }
             } else {
                 return None;
             }
@@ -449,9 +479,20 @@ mod tests {
         let str_set1: ListSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
         let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
-        let expected: ListSet<String> =
-            TEST_STRS[0..].into_iter().map(|s| s.to_string()).collect();
+        let expected: ListSet<String> = TEST_STRS[0..].into_iter().map(|s| s.to_string()).collect();
         let result = str_set1 | str_set2;
+        assert!(result.is_valid());
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn test_intersection() {
+        let str_set1: ListSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let expected: ListSet<String> =
+            TEST_STRS[4..8].into_iter().map(|s| s.to_string()).collect();
+        let result = str_set1 & str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
     }
