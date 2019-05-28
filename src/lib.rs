@@ -35,7 +35,7 @@ impl<T: Ord> ListSet<T> {
         Self::default()
     }
 
-    // Return the number of items in this set.
+    /// Return the number of items in this set.
     pub fn len(&self) -> usize {
         self.ordered_list.len()
     }
@@ -52,7 +52,7 @@ impl<T: Ord> ListSet<T> {
         self.ordered_list.clear()
     }
 
-    // Return false if the item was already a member otherwise true
+    /// Return false if the item was already a member otherwise true
     pub fn insert(&mut self, item: T) -> bool {
         if let Err(index) = self.ordered_list.binary_search(&item) {
             self.ordered_list.insert(index, item);
@@ -62,7 +62,7 @@ impl<T: Ord> ListSet<T> {
         }
     }
 
-    // Return true if the item was a member and false otherwise
+    /// Return true if the item was a member and false otherwise
     pub fn remove(&mut self, item: &T) -> bool {
         if let Ok(index) = self.ordered_list.binary_search(item) {
             self.ordered_list.remove(index);
@@ -72,7 +72,7 @@ impl<T: Ord> ListSet<T> {
         }
     }
 
-    // Return false if the item is already a member
+    /// Return false if the item is already a member
     pub fn contains(&self, item: &T) -> bool {
         self.ordered_list.binary_search(item).is_ok()
     }
@@ -85,8 +85,8 @@ impl<T: Ord> ListSet<T> {
         self.ordered_list.iter()
     }
 
-    // Return an iterator over the items in the set that occur after the
-    // given item in the sorting order
+    /// Return an iterator over the items in the set that occur after the
+    /// given item in the sorting order
     pub fn iter_after(&self, item: &T) -> Iter<T> {
         match self.ordered_list.binary_search(item) {
             Ok(index) => self.ordered_list[index + 1..].iter(),
@@ -98,7 +98,7 @@ impl<T: Ord> ListSet<T> {
         self.ordered_list.drain(..)
     }
 
-    // Return true if ordered_list is sorted and contains no duplicates
+    /// Return true if ordered_list is sorted and contains no duplicates
     pub fn is_valid(&self) -> bool {
         for i in 1..self.ordered_list.len() {
             if self.ordered_list[i - 1] >= self.ordered_list[i] {
@@ -133,7 +133,7 @@ impl<T: Ord> ListSet<T> {
         true
     }
 
-    // return true if self is a subset of other
+    /// return true if self is a subset of other
     pub fn is_subset(&self, other: &Self) -> bool {
         let mut self_iter = self.ordered_list.iter();
         let mut other_iter = other.ordered_list.iter();
@@ -376,7 +376,6 @@ mod tests {
     ];
 
     fn random_sequence(length: usize) -> Vec<u64> {
-        //0..length.map(|_| random::<u64>()).collect()
         let mut v = vec![];
         for _ in 0..length {
             let t: u64 = random();
