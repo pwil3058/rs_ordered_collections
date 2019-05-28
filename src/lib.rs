@@ -21,7 +21,7 @@ extern crate rand;
 use std::cmp::Ordering;
 use std::default::Default;
 use std::iter::FromIterator;
-use std::ops::{BitXor, Sub};
+use std::ops::{BitOr, BitXor, Sub};
 use std::slice::Iter;
 use std::vec::Drain;
 
@@ -258,6 +258,44 @@ impl<'a, T: Ord> Iterator for SymmetricDifference<'a, T> {
     }
 }
 
+define_set_operation!(Union, union, BitOr, bitor);
+
+impl<'a, T: Ord> Iterator for Union<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(lh_cur_item) = self.o_lh_cur_item {
+                if let Some(rh_cur_item) = self.o_rh_cur_item {
+                    match lh_cur_item.cmp(&rh_cur_item) {
+                        Ordering::Less => {
+                            self.o_lh_cur_item = self.lh_iter.next();
+                            return Some(lh_cur_item);
+                        }
+                        Ordering::Greater => {
+                            self.o_rh_cur_item = self.rh_iter.next();
+                            return Some(rh_cur_item)
+                        }
+                        Ordering::Equal => {
+                            self.o_lh_cur_item = self.lh_iter.next();
+                            self.o_rh_cur_item = self.rh_iter.next();
+                            return Some(lh_cur_item);
+                        }
+                    }
+                } else {
+                    self.o_lh_cur_item = self.lh_iter.next();
+                    return Some(lh_cur_item);
+                }
+            } else if let Some(rh_cur_item) = self.o_rh_cur_item {
+                self.o_rh_cur_item = self.rh_iter.next();
+                return Some(rh_cur_item)
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::hash_map::DefaultHasher;
@@ -387,6 +425,7 @@ mod tests {
         let expected: ListSet<String> =
             TEST_STRS[0..4].into_iter().map(|s| s.to_string()).collect();
         let result = str_set1 - str_set2;
+        assert!(result.is_valid());
         assert_eq!(expected, result);
     }
 
@@ -401,6 +440,19 @@ mod tests {
             expected.insert(item);
         }
         let result = str_set1 ^ str_set2;
+        assert!(result.is_valid());
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn test_union() {
+        let str_set1: ListSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let expected: ListSet<String> =
+            TEST_STRS[0..].into_iter().map(|s| s.to_string()).collect();
+        let result = str_set1 | str_set2;
+        assert!(result.is_valid());
         assert_eq!(expected, result);
     }
 }
