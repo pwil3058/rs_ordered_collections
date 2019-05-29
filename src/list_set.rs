@@ -525,13 +525,23 @@ mod tests {
     #[test]
     fn test_is_subset() {
         let max = TEST_STRS.len();
-        for test in &[((0, 7), (7, max), false), ((7, max), (5, max), true),
-            ((5, max), (7, max), false), ((1, 7), (1, 7), true),
-            ((0, 9), (5, max), false), ((1, max), (1, 7), false),
+        for test in &[
+            ((0, 7), (7, max), false),
+            ((7, max), (5, max), true),
+            ((5, max), (7, max), false),
+            ((1, 7), (1, 7), true),
+            ((0, 9), (5, max), false),
+            ((1, max), (1, 7), false),
         ] {
             println!("TEST: {:?}", test); // to help identify failed tests
-            let set1: ListSet<String> = TEST_STRS[(test.0).0..(test.0).1].into_iter().map(|s| s.to_string()).collect();
-            let set2: ListSet<String> = TEST_STRS[(test.1).0..(test.1).1].into_iter().map(|s| s.to_string()).collect();
+            let set1: ListSet<String> = TEST_STRS[(test.0).0..(test.0).1]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect();
+            let set2: ListSet<String> = TEST_STRS[(test.1).0..(test.1).1]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect();
             assert!(set1.is_subset(&set2) == test.2);
             if set1.is_subset(&set2) {
                 for item in set1.iter() {
@@ -544,13 +554,23 @@ mod tests {
     #[test]
     fn test_is_superset() {
         let max = TEST_STRS.len();
-        for test in &[((0, 7), (7, max), false), ((7, max), (5, max), false),
-            ((5, max), (7, max), true), ((1, 7), (1, 7), true),
-            ((0, 9), (5, max), false), ((1, max), (1, 7), true),
+        for test in &[
+            ((0, 7), (7, max), false),
+            ((7, max), (5, max), false),
+            ((5, max), (7, max), true),
+            ((1, 7), (1, 7), true),
+            ((0, 9), (5, max), false),
+            ((1, max), (1, 7), true),
         ] {
             println!("TEST: {:?}", test); // to help identify failed tests
-            let set1: ListSet<String> = TEST_STRS[(test.0).0..(test.0).1].into_iter().map(|s| s.to_string()).collect();
-            let set2: ListSet<String> = TEST_STRS[(test.1).0..(test.1).1].into_iter().map(|s| s.to_string()).collect();
+            let set1: ListSet<String> = TEST_STRS[(test.0).0..(test.0).1]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect();
+            let set2: ListSet<String> = TEST_STRS[(test.1).0..(test.1).1]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect();
             assert!(set1.is_superset(&set2) == test.2);
             if set1.is_superset(&set2) {
                 for item in set2.iter() {

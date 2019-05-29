@@ -18,4 +18,5 @@
 
 extern crate rand;
 
+pub mod list_map;
 pub mod list_set;
