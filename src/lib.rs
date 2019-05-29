@@ -133,7 +133,7 @@ impl<T: Ord> ListSet<T> {
         true
     }
 
-    /// return true if self is a subset of other
+    /// Return true if self is a subset of other
     pub fn is_subset(&self, other: &Self) -> bool {
         let mut self_iter = self.ordered_list.iter();
         let mut other_iter = other.ordered_list.iter();
@@ -143,14 +143,41 @@ impl<T: Ord> ListSet<T> {
             if let Some(other_cur_item) = o_other_cur_item {
                 match self_cur_item.cmp(&other_cur_item) {
                     Ordering::Less => {
-                        o_self_cur_item = self_iter.next();
+                        return false;
                     }
                     Ordering::Greater => {
-                        return false;
+                        o_other_cur_item = other_iter.next();
                     }
                     Ordering::Equal => {
                         o_self_cur_item = self_iter.next();
                         o_other_cur_item = other_iter.next();
+                    }
+                }
+            } else {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Return true if self is a superset of other
+    pub fn is_superset(&self, other: &Self) -> bool {
+        let mut self_iter = self.ordered_list.iter();
+        let mut other_iter = other.ordered_list.iter();
+        let mut o_self_cur_item = self_iter.next();
+        let mut o_other_cur_item = other_iter.next();
+        while let Some(other_cur_item) = o_other_cur_item {
+            if let Some(self_cur_item) = o_self_cur_item {
+                match other_cur_item.cmp(&self_cur_item) {
+                    Ordering::Less => {
+                        return false;
+                    }
+                    Ordering::Greater => {
+                        o_self_cur_item = self_iter.next();
+                    }
+                    Ordering::Equal => {
+                        o_other_cur_item = other_iter.next();
+                        o_self_cur_item = self_iter.next();
                     }
                 }
             } else {
@@ -497,14 +524,40 @@ mod tests {
 
     #[test]
     fn test_is_subset() {
-        let set1: ListSet<String> = TEST_STRS[0..7].into_iter().map(|s| s.to_string()).collect();
-        let set2: ListSet<String> = TEST_STRS[7..].into_iter().map(|s| s.to_string()).collect();
-        let set3: ListSet<String> = TEST_STRS[5..].into_iter().map(|s| s.to_string()).collect();
-        assert!(!set1.is_subset(&set2));
-        assert!(!set1.is_subset(&set3));
-        assert!(!set2.is_subset(&set3));
-        assert!(set1.is_subset(&set1));
-        assert!(set3.is_subset(&set2));
+        let max = TEST_STRS.len();
+        for test in &[((0, 7), (7, max), false), ((7, max), (5, max), true),
+            ((5, max), (7, max), false), ((1, 7), (1, 7), true),
+            ((0, 9), (5, max), false), ((1, max), (1, 7), false),
+        ] {
+            println!("TEST: {:?}", test); // to help identify failed tests
+            let set1: ListSet<String> = TEST_STRS[(test.0).0..(test.0).1].into_iter().map(|s| s.to_string()).collect();
+            let set2: ListSet<String> = TEST_STRS[(test.1).0..(test.1).1].into_iter().map(|s| s.to_string()).collect();
+            assert!(set1.is_subset(&set2) == test.2);
+            if set1.is_subset(&set2) {
+                for item in set1.iter() {
+                    assert!(set2.contains(item));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_is_superset() {
+        let max = TEST_STRS.len();
+        for test in &[((0, 7), (7, max), false), ((7, max), (5, max), false),
+            ((5, max), (7, max), true), ((1, 7), (1, 7), true),
+            ((0, 9), (5, max), false), ((1, max), (1, 7), true),
+        ] {
+            println!("TEST: {:?}", test); // to help identify failed tests
+            let set1: ListSet<String> = TEST_STRS[(test.0).0..(test.0).1].into_iter().map(|s| s.to_string()).collect();
+            let set2: ListSet<String> = TEST_STRS[(test.1).0..(test.1).1].into_iter().map(|s| s.to_string()).collect();
+            assert!(set1.is_superset(&set2) == test.2);
+            if set1.is_superset(&set2) {
+                for item in set2.iter() {
+                    assert!(set1.contains(item));
+                }
+            }
+        }
     }
 
     #[test]
