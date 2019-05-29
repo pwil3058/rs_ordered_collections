@@ -73,8 +73,15 @@ impl<K: Ord, V> ListMap<K, V> {
         self.ordered_list.drain(..)
     }
 
-    pub fn iter(&mut self) -> Iter<(K, V)> {
+    pub fn iter(&self) -> Iter<(K, V)> {
         self.ordered_list.iter()
+    }
+
+    pub fn iter_after(&self, key: &K) -> Iter<(K, V)> {
+        match self.get_index_for(key) {
+            Ok(index) => self.ordered_list[index + 1..].iter(),
+            Err(index) => self.ordered_list[index..].iter(),
+        }
     }
 
     pub fn get(&self, key: &K) -> Option<&V> {
