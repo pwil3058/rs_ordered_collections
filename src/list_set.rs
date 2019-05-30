@@ -133,24 +133,23 @@ impl<T: Ord> ListSet<T> {
         true
     }
 
-    /// Return true if self is a subset of other
-    pub fn is_subset(&self, other: &Self) -> bool {
-        let mut self_iter = self.ordered_list.iter();
-        let mut other_iter = other.ordered_list.iter();
-        let mut o_self_cur_item = self_iter.next();
-        let mut o_other_cur_item = other_iter.next();
-        while let Some(self_cur_item) = o_self_cur_item {
-            if let Some(other_cur_item) = o_other_cur_item {
-                match self_cur_item.cmp(&other_cur_item) {
+    fn a_contains_b(a: &Self, b: &Self) -> bool {
+        let mut a_iter = a.ordered_list.iter();
+        let mut o_a_cur_item = a_iter.next();
+        let mut b_iter = b.ordered_list.iter();
+        let mut o_b_cur_item = b_iter.next();
+        while let Some(b_cur_item) = o_b_cur_item {
+            if let Some(a_cur_item) = o_a_cur_item {
+                match b_cur_item.cmp(&a_cur_item) {
                     Ordering::Less => {
                         return false;
                     }
                     Ordering::Greater => {
-                        o_other_cur_item = other_iter.next();
+                        o_a_cur_item = a_iter.next();
                     }
                     Ordering::Equal => {
-                        o_self_cur_item = self_iter.next();
-                        o_other_cur_item = other_iter.next();
+                        o_b_cur_item = b_iter.next();
+                        o_a_cur_item = a_iter.next();
                     }
                 }
             } else {
@@ -160,31 +159,24 @@ impl<T: Ord> ListSet<T> {
         true
     }
 
+    /// Return true if self is a subset of other
+    pub fn is_subset(&self, other: &Self) -> bool {
+        Self::a_contains_b(other, self)
+    }
+
+    /// Return true if self is a subset of other
+    pub fn is_proper_subset(&self, other: &Self) -> bool {
+        other.len() > self.len() && Self::a_contains_b(other, self)
+    }
+
     /// Return true if self is a superset of other
     pub fn is_superset(&self, other: &Self) -> bool {
-        let mut self_iter = self.ordered_list.iter();
-        let mut other_iter = other.ordered_list.iter();
-        let mut o_self_cur_item = self_iter.next();
-        let mut o_other_cur_item = other_iter.next();
-        while let Some(other_cur_item) = o_other_cur_item {
-            if let Some(self_cur_item) = o_self_cur_item {
-                match other_cur_item.cmp(&self_cur_item) {
-                    Ordering::Less => {
-                        return false;
-                    }
-                    Ordering::Greater => {
-                        o_self_cur_item = self_iter.next();
-                    }
-                    Ordering::Equal => {
-                        o_other_cur_item = other_iter.next();
-                        o_self_cur_item = self_iter.next();
-                    }
-                }
-            } else {
-                return false;
-            }
-        }
-        true
+        Self::a_contains_b(self, other)
+    }
+
+    /// Return true if self is a superset of other
+    pub fn is_proper_superset(&self, other: &Self) -> bool {
+        self.len() > other.len() && Self::a_contains_b(self, other)
     }
 }
 
@@ -526,12 +518,12 @@ mod tests {
     fn test_is_subset() {
         let max = TEST_STRS.len();
         for test in &[
-            ((0, 7), (7, max), false),
-            ((7, max), (5, max), true),
-            ((5, max), (7, max), false),
-            ((1, 7), (1, 7), true),
-            ((0, 9), (5, max), false),
-            ((1, max), (1, 7), false),
+            ((0, 7), (7, max), false, false),
+            ((7, max), (5, max), true, true),
+            ((5, max), (7, max), false, false),
+            ((1, 7), (1, 7), true, false),
+            ((0, 9), (5, max), false, false),
+            ((1, max), (1, 7), false, false),
         ] {
             println!("TEST: {:?}", test); // to help identify failed tests
             let set1: ListSet<String> = TEST_STRS[(test.0).0..(test.0).1]
@@ -548,6 +540,7 @@ mod tests {
                     assert!(set2.contains(item));
                 }
             }
+            assert!(set1.is_proper_subset(&set2) == test.3);
         }
     }
 
@@ -555,12 +548,12 @@ mod tests {
     fn test_is_superset() {
         let max = TEST_STRS.len();
         for test in &[
-            ((0, 7), (7, max), false),
-            ((7, max), (5, max), false),
-            ((5, max), (7, max), true),
-            ((1, 7), (1, 7), true),
-            ((0, 9), (5, max), false),
-            ((1, max), (1, 7), true),
+            ((0, 7), (7, max), false, false),
+            ((7, max), (5, max), false, false),
+            ((5, max), (7, max), true, true),
+            ((1, 7), (1, 7), true, false),
+            ((0, 9), (5, max), false, false),
+            ((1, max), (1, 7), true, true),
         ] {
             println!("TEST: {:?}", test); // to help identify failed tests
             let set1: ListSet<String> = TEST_STRS[(test.0).0..(test.0).1]
@@ -577,6 +570,7 @@ mod tests {
                     assert!(set1.contains(item));
                 }
             }
+            assert!(set1.is_proper_superset(&set2) == test.3);
         }
     }
 
