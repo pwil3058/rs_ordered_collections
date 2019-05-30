@@ -13,7 +13,7 @@
 //limitations under the License.
 
 use std::default::Default;
-use std::slice::Iter;
+use std::slice::{Iter, IterMut};
 use std::vec::Drain;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -77,6 +77,10 @@ impl<K: Ord, V> ListMap<K, V> {
         self.ordered_list.iter()
     }
 
+    pub fn iter_mut(&mut self) -> IterMut<(K, V)> {
+        self.ordered_list.iter_mut()
+    }
+
     pub fn iter_after(&self, key: &K) -> Iter<(K, V)> {
         match self.get_index_for(key) {
             Ok(index) => self.ordered_list[index + 1..].iter(),
@@ -90,6 +94,12 @@ impl<K: Ord, V> ListMap<K, V> {
 
     pub fn values(&self) -> Values<K, V> {
         Values { iter: self.iter() }
+    }
+
+    pub fn values_mut<'a>(&'a mut self) -> ValuesMut<'a, K, V> {
+        ValuesMut {
+            iter_mut: self.iter_mut(),
+        }
     }
 
     pub fn get(&self, key: &K) -> Option<&V> {
@@ -155,6 +165,22 @@ impl<'a, K: Ord, V> Iterator for Values<'a, K, V> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some((_, value)) = self.iter.next() {
+            return Some(value);
+        } else {
+            None
+        }
+    }
+}
+
+pub struct ValuesMut<'a, K: Ord, V> {
+    iter_mut: IterMut<'a, (K, V)>,
+}
+
+impl<'a, K: Ord, V> Iterator for ValuesMut<'a, K, V> {
+    type Item = &'a mut V;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some((_, value)) = self.iter_mut.next() {
             return Some(value);
         } else {
             None
