@@ -84,6 +84,14 @@ impl<K: Ord, V> ListMap<K, V> {
         }
     }
 
+    pub fn keys(&self) -> Keys<K, V> {
+        Keys { iter: self.iter() }
+    }
+
+    pub fn values(&self) -> Values<K, V> {
+        Values { iter: self.iter() }
+    }
+
     pub fn get(&self, key: &K) -> Option<&V> {
         if let Ok(index) = self.get_index_for(key) {
             Some(&self.ordered_list.get(index).unwrap().1)
@@ -118,6 +126,38 @@ impl<K: Ord, V> ListMap<K, V> {
         match self.get_index_for(&key) {
             Ok(index) => Some(self.ordered_list.remove(index).1),
             Err(_) => None,
+        }
+    }
+}
+
+pub struct Keys<'a, K, V> {
+    iter: Iter<'a, (K, V)>,
+}
+
+impl<'a, K: Ord, V> Iterator for Keys<'a, K, V> {
+    type Item = &'a K;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some((key, _)) = self.iter.next() {
+            return Some(key);
+        } else {
+            None
+        }
+    }
+}
+
+pub struct Values<'a, K, V> {
+    iter: Iter<'a, (K, V)>,
+}
+
+impl<'a, K: Ord, V> Iterator for Values<'a, K, V> {
+    type Item = &'a V;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some((_, value)) = self.iter.next() {
+            return Some(value);
+        } else {
+            None
         }
     }
 }
