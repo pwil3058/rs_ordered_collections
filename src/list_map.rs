@@ -77,7 +77,7 @@ impl<K: Ord, V> ListMap<K, V> {
         self.ordered_list.iter()
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<(K, V)> {
+    fn iter_mut(&mut self) -> IterMut<(K, V)> {
         self.ordered_list.iter_mut()
     }
 
