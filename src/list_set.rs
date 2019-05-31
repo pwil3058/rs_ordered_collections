@@ -135,6 +135,31 @@ impl<T: Ord> ListSet<T> {
         true
     }
 
+    pub fn is_map_disjoint<V>(&self, other: &list_map::ListMap<T, V>) -> bool {
+        let mut self_iter = self.ordered_list.iter();
+        let mut other_iter = other.keys();
+        let mut o_self_cur_item = self_iter.next();
+        let mut o_other_cur_item = other_iter.next();
+        while let Some(self_cur_item) = o_self_cur_item {
+            if let Some(other_cur_item) = o_other_cur_item {
+                match self_cur_item.cmp(&other_cur_item) {
+                    Ordering::Less => {
+                        o_self_cur_item = self_iter.next();
+                    }
+                    Ordering::Greater => {
+                        o_other_cur_item = other_iter.next();
+                    }
+                    Ordering::Equal => {
+                        return false;
+                    }
+                }
+            } else {
+                return true;
+            }
+        }
+        true
+    }
+
     fn a_contains_b(a: &Self, b: &Self) -> bool {
         let mut a_iter = a.ordered_list.iter();
         let mut o_a_cur_item = a_iter.next();
@@ -439,6 +464,36 @@ impl<'a, T: Ord, V> Iterator for MapDifference<'a, T, V> {
             } else {
                 self.o_set_cur_item = self.set_iter.next();
                 return Some(set_cur_item);
+            }
+        }
+        None
+    }
+}
+
+define_map_op_iterator!(MapIntersection);
+define_map_op_iterator_function!(MapIntersection, map_intersection);
+
+impl<'a, T: Ord, V> Iterator for MapIntersection<'a, T, V> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(set_cur_item) = self.o_set_cur_item {
+            if let Some(map_cur_item) = self.o_map_cur_item {
+                match set_cur_item.cmp(&map_cur_item) {
+                    Ordering::Less => {
+                        self.o_set_cur_item = self.set_iter.next();
+                    }
+                    Ordering::Greater => {
+                        self.o_map_cur_item = self.map_iter.next();
+                    }
+                    Ordering::Equal => {
+                        self.o_set_cur_item = self.set_iter.next();
+                        self.o_map_cur_item = self.map_iter.next();
+                        return Some(set_cur_item);
+                    }
+                }
+            } else {
+                return None;
             }
         }
         None
