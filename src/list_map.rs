@@ -132,7 +132,7 @@ impl<K: Ord, V> ListMap<K, V> {
         }
     }
 
-    pub fn remove(&mut self, key: K) -> Option<V> {
+    pub fn remove(&mut self, key: &K) -> Option<V> {
         match self.get_index_for(&key) {
             Ok(index) => Some(self.ordered_list.remove(index).1),
             Err(_) => None,
