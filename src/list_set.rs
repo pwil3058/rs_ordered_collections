@@ -268,6 +268,14 @@ macro_rules! define_set_operation {
                 self.$function(&other).collect()
             }
         }
+
+        impl<T: Ord + Clone> $op for &ListSet<T> {
+            type Output = ListSet<T>;
+
+            fn $op_fn(self, other: Self) -> Self::Output {
+                self.$function(&other).cloned().collect()
+            }
+        }
     };
 }
 
