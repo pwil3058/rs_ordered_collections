@@ -55,37 +55,6 @@ pub mod iteration {
             }
         }
 
-        pub fn l_xor_r_next(&'a mut self) -> Option<&T> {
-            loop {
-                if let Some(l_item) = self.l_item {
-                    if let Some(r_item) = self.r_item {
-                        match l_item.cmp(&r_item) {
-                            Ordering::Less => {
-                                self.l_item = self.l_iter.next();
-                                return Some(l_item);
-                            }
-                            Ordering::Greater => {
-                                self.r_item = self.r_iter.next();
-                                return Some(r_item);
-                            }
-                            Ordering::Equal => {
-                                self.l_item = self.l_iter.next();
-                                self.r_item = self.r_iter.next();
-                            }
-                        }
-                    } else {
-                        self.l_item = self.l_iter.next();
-                        return Some(l_item);
-                    }
-                } else if let Some(r_item) = self.r_item {
-                    self.r_item = self.r_iter.next();
-                    return Some(r_item);
-                } else {
-                    return None;
-                }
-            }
-        }
-
         pub fn are_disjoint(&mut self) -> bool {
             loop {
                 if let Some(l_item) = self.l_item {
@@ -111,7 +80,35 @@ pub mod iteration {
         }
     }
 
-    impl<'a, T, L, R> Iterator for PairedIters<'a, T, L, R>
+    pub struct XorIterator<'a, T, L, R>
+    where
+        T: 'a + Ord,
+        L: Iterator<Item = &'a T>,
+        R: Iterator<Item = &'a T>,
+    {
+        l_item: Option<L::Item>,
+        r_item: Option<R::Item>,
+        l_iter: L,
+        r_iter: R,
+    }
+
+    impl<'a, T, L, R> XorIterator<'a, T, L, R>
+    where
+        T: 'a + Ord,
+        L: Iterator<Item = &'a T>,
+        R: Iterator<Item = &'a T>,
+    {
+        pub fn new(mut l_iter: L, mut r_iter: R) -> Self {
+            Self {
+                l_item: l_iter.next(),
+                r_item: r_iter.next(),
+                l_iter: l_iter,
+                r_iter: r_iter,
+            }
+        }
+    }
+
+    impl<'a, T, L, R> Iterator for XorIterator<'a, T, L, R>
     where
         T: 'a + Ord,
         L: Iterator<Item = &'a T>,
@@ -159,14 +156,13 @@ pub mod iteration {
         type Whatever<'a> = PairedIters::<'a, &'a str, Iter<'a, &'a str>, Iter<'a, &'a str>>;
 
         #[test]
-        fn l_xor_r_next_works() {
+        fn xor_iterator_works() {
             let list1 = vec!["a", "c", "e", "g", "i", "k", "m"];
             let list2 = vec!["b", "d", "f", "h", "i", "k", "m"];
 
-            assert!(Whatever::new(list1.iter(), list1.iter()).l_xor_r_next() == None);
-            let mut xor = Whatever::new(list1[..3].iter(), list2[..2].iter());
-            assert_eq!(xor.l_xor_r_next(), Some(&"a"));
-            let result: Vec<&str> = Whatever::new(list1[..3].iter(), list2[..2].iter()).cloned().collect();
+            let mut xor_iter = XorIterator::new(list1[..3].iter(), list2[..2].iter());
+            assert_eq!(xor_iter.next(), Some(&"a"));
+            let result: Vec<&str> = XorIterator::new(list1[..3].iter(), list2[..2].iter()).cloned().collect();
             println!("result = {:?}", result);
             assert_eq!(result, vec!["a", "b", "c", "d", "e"]);
         }
