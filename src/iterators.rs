@@ -15,8 +15,13 @@
 ///! Iterators over the output of pairs of ordered Iterators applying
 ///! various filters. If the Iterators contain no duplicates as well
 ///! as bing sorted then the filter will produce set operations.
+
 use std::cmp::Ordering;
 
+use crate::list_set::ListSet;
+
+/// Return true if the data stream from the Iterator is ordered and
+/// contains no duplicates.  Useful for testing.
 pub fn output_is_ordered_nodups<'a, T, I>(iter: &mut I) -> bool
 where
     T: 'a + Ord,
@@ -36,7 +41,9 @@ where
     true
 }
 
-pub struct XorIterator<'a, T, L, R>
+/// An Iterator over the symmetric set difference between the output of two
+/// Iterators whose (individual) output is ordered and contains no duplicates
+pub struct SymmetricDifference<'a, T, L, R>
 where
     T: 'a + Ord,
     L: Iterator<Item = &'a T>,
@@ -48,7 +55,7 @@ where
     r_iter: R,
 }
 
-impl<'a, T, L, R> XorIterator<'a, T, L, R>
+impl<'a, T, L, R> SymmetricDifference<'a, T, L, R>
 where
     T: 'a + Ord,
     L: Iterator<Item = &'a T>,
@@ -64,7 +71,7 @@ where
     }
 }
 
-impl<'a, T, L, R> Iterator for XorIterator<'a, T, L, R>
+impl<'a, T, L, R> Iterator for SymmetricDifference<'a, T, L, R>
 where
     T: 'a + Ord,
     L: Iterator<Item = &'a T>,
@@ -104,16 +111,41 @@ where
     }
 }
 
-impl<'a, T, L, R> XorIterator<'a, T, L, R>
+trait SetOperations<'a, T, I>: Iterator<Item = &'a T> + Sized
+where
+    T: 'a + Ord,
+    I: Iterator<Item = &'a T>,
+{
+    fn symmetric_difference(self, iter: I) -> SymmetricDifference<'a, T, Self, I> {
+        SymmetricDifference::new(self, iter)
+    }
+}
+
+trait SetConversion<'a, T>: Iterator<Item = &'a T>
+where
+    T: 'a + Ord + Clone,
+{
+    /// Create a ListSet<T> from the items in the Iterator's output
+    fn to_list_set(&mut self) -> ListSet<T> {
+        let ordered_list: Vec<T> = self.cloned().collect();
+        ListSet::<T>::from(ordered_list)
+    }
+}
+
+impl<'a, T, L, R, I> SetOperations<'a, T, I> for SymmetricDifference<'a, T, L, R>
 where
     T: 'a + Ord,
     L: Iterator<Item = &'a T>,
     R: Iterator<Item = &'a T>,
-{
-    pub fn xor<I: Iterator<Item = &'a T>>(self, iter: I) -> XorIterator<'a, T, XorIterator<'a, T, L, R>, I> {
-        XorIterator::new(self, iter)
-    }
-}
+    I: Iterator<Item = &'a T>,
+{}
+
+impl<'a, T, L, R> SetConversion<'a, T> for SymmetricDifference<'a, T, L, R>
+where
+    T: 'a + Ord + Clone,
+    L: Iterator<Item = &'a T>,
+    R: Iterator<Item = &'a T>,
+{}
 
 #[cfg(test)]
 mod tests {
@@ -136,20 +168,25 @@ mod tests {
 
     #[test]
     fn xor_iterator_works() {
-        let mut xor_iter = XorIterator::new(LIST_0[..3].iter(), LIST_1[..2].iter());
+        let mut xor_iter = SymmetricDifference::new(LIST_0[..3].iter(), LIST_1[..2].iter());
         assert_eq!(xor_iter.next(), Some(&"a"));
-        let result: Vec<&str> = XorIterator::new(LIST_0[..3].iter(), LIST_1[..2].iter())
+        let result: Vec<&str> = SymmetricDifference::new(LIST_0[..3].iter(), LIST_1[..2].iter())
             .cloned()
             .collect();
         assert_eq!(result, vec!["a", "b", "c", "d", "e"]);
-        let result: Vec<&str> = XorIterator::new(LIST_0[..3].iter(), LIST_2[..2].iter())
+        let result: Vec<&str> = SymmetricDifference::new(LIST_0[..3].iter(), LIST_2[..2].iter())
             .cloned()
             .collect();
         assert_eq!(result, vec!["b", "c", "e"]);
-        let result: Vec<&str> = XorIterator::new(LIST_0[..3].iter(), LIST_2[..2].iter())
-            .xor(LIST_1[..3].iter())
+        let result: Vec<&str> = SymmetricDifference::new(LIST_0[..3].iter(), LIST_2[..2].iter())
+            .symmetric_difference(LIST_1[..3].iter())
             .cloned()
             .collect();
         assert_eq!(result, vec!["c", "d", "e", "f"]);
+        let set = SymmetricDifference::new(LIST_0[..3].iter(), LIST_2[..2].iter())
+            .symmetric_difference(LIST_1[..3].iter())
+            .to_list_set();
+        let vec: Vec<&str> = set.iter().cloned().collect();
+        assert_eq!(vec, vec!["c", "d", "e", "f"]);
     }
 }
