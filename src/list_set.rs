@@ -27,6 +27,7 @@ use std::slice::Iter;
 use std::vec::Drain;
 
 use crate::list_map;
+pub use crate::iterators::{SetIter, Union, Intersection, Difference, SymmetricDifference};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ListSet<T: Ord> {
@@ -84,16 +85,16 @@ impl<T: Ord> ListSet<T> {
         self.ordered_list.first()
     }
 
-    pub fn iter(&self) -> Iter<T> {
-        self.ordered_list.iter()
+    pub fn iter(&self) -> SetIter<T, Iter<T>> {
+        SetIter::new(self.ordered_list.iter())
     }
 
     /// Return an iterator over the items in the set that occur after the
     /// given item in the sorting order
-    pub fn iter_after(&self, item: &T) -> Iter<T> {
+    pub fn iter_after(&self, item: &T) -> SetIter<T, Iter<T>> {
         match self.ordered_list.binary_search(item) {
-            Ok(index) => self.ordered_list[index + 1..].iter(),
-            Err(index) => self.ordered_list[index..].iter(),
+            Ok(index) => SetIter::new(self.ordered_list[index + 1..].iter()),
+            Err(index) => SetIter::new(self.ordered_list[index..].iter()),
         }
     }
 
@@ -251,23 +252,9 @@ impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for ListSet<T> {
 
 macro_rules! define_set_operation {
     ( $iter:ident, $function:ident, $op:ident, $op_fn:ident  ) => {
-        pub struct $iter<'a, T: Ord> {
-            o_lh_cur_item: Option<&'a T>,
-            o_rh_cur_item: Option<&'a T>,
-            lh_iter: Iter<'a, T>,
-            rh_iter: Iter<'a, T>,
-        }
-
         impl<T: Ord> ListSet<T> {
-            pub fn $function<'a>(&'a self, other: &'a Self) -> $iter<'a, T> {
-                let mut self_iter = self.ordered_list.iter();
-                let mut other_iter = other.ordered_list.iter();
-                $iter::<T> {
-                    o_lh_cur_item: self_iter.next(),
-                    o_rh_cur_item: other_iter.next(),
-                    lh_iter: self_iter,
-                    rh_iter: other_iter,
-                }
+            pub fn $function<'a>(&'a self, other: &'a Self) -> $iter<'a, T, Iter<T>, Iter<T>> {
+                $iter::new(self.ordered_list.iter(), other.ordered_list.iter())
             }
         }
 
@@ -290,141 +277,9 @@ macro_rules! define_set_operation {
 }
 
 define_set_operation!(Difference, difference, Sub, sub);
-
-impl<'a, T: Ord> Iterator for Difference<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while let Some(lh_cur_item) = self.o_lh_cur_item {
-            if let Some(rh_cur_item) = self.o_rh_cur_item {
-                match lh_cur_item.cmp(&rh_cur_item) {
-                    Ordering::Less => {
-                        self.o_lh_cur_item = self.lh_iter.next();
-                        return Some(lh_cur_item);
-                    }
-                    Ordering::Greater => {
-                        self.o_rh_cur_item = self.rh_iter.next();
-                    }
-                    Ordering::Equal => {
-                        self.o_lh_cur_item = self.lh_iter.next();
-                        self.o_rh_cur_item = self.rh_iter.next();
-                    }
-                }
-            } else {
-                self.o_lh_cur_item = self.lh_iter.next();
-                return Some(lh_cur_item);
-            }
-        }
-        None
-    }
-}
-
 define_set_operation!(SymmetricDifference, symmetric_difference, BitXor, bitxor);
-
-impl<'a, T: Ord> Iterator for SymmetricDifference<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if let Some(lh_cur_item) = self.o_lh_cur_item {
-                if let Some(rh_cur_item) = self.o_rh_cur_item {
-                    match lh_cur_item.cmp(&rh_cur_item) {
-                        Ordering::Less => {
-                            self.o_lh_cur_item = self.lh_iter.next();
-                            return Some(lh_cur_item);
-                        }
-                        Ordering::Greater => {
-                            self.o_rh_cur_item = self.rh_iter.next();
-                            return Some(rh_cur_item);
-                        }
-                        Ordering::Equal => {
-                            self.o_lh_cur_item = self.lh_iter.next();
-                            self.o_rh_cur_item = self.rh_iter.next();
-                        }
-                    }
-                } else {
-                    self.o_lh_cur_item = self.lh_iter.next();
-                    return Some(lh_cur_item);
-                }
-            } else if let Some(rh_cur_item) = self.o_rh_cur_item {
-                self.o_rh_cur_item = self.rh_iter.next();
-                return Some(rh_cur_item);
-            } else {
-                return None;
-            }
-        }
-    }
-}
-
 define_set_operation!(Union, union, BitOr, bitor);
-
-impl<'a, T: Ord> Iterator for Union<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if let Some(lh_cur_item) = self.o_lh_cur_item {
-                if let Some(rh_cur_item) = self.o_rh_cur_item {
-                    match lh_cur_item.cmp(&rh_cur_item) {
-                        Ordering::Less => {
-                            self.o_lh_cur_item = self.lh_iter.next();
-                            return Some(lh_cur_item);
-                        }
-                        Ordering::Greater => {
-                            self.o_rh_cur_item = self.rh_iter.next();
-                            return Some(rh_cur_item);
-                        }
-                        Ordering::Equal => {
-                            self.o_lh_cur_item = self.lh_iter.next();
-                            self.o_rh_cur_item = self.rh_iter.next();
-                            return Some(lh_cur_item);
-                        }
-                    }
-                } else {
-                    self.o_lh_cur_item = self.lh_iter.next();
-                    return Some(lh_cur_item);
-                }
-            } else if let Some(rh_cur_item) = self.o_rh_cur_item {
-                self.o_rh_cur_item = self.rh_iter.next();
-                return Some(rh_cur_item);
-            } else {
-                return None;
-            }
-        }
-    }
-}
-
 define_set_operation!(Intersection, intersection, BitAnd, bitand);
-
-impl<'a, T: Ord> Iterator for Intersection<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if let Some(lh_cur_item) = self.o_lh_cur_item {
-                if let Some(rh_cur_item) = self.o_rh_cur_item {
-                    match lh_cur_item.cmp(&rh_cur_item) {
-                        Ordering::Less => {
-                            self.o_lh_cur_item = self.lh_iter.next();
-                        }
-                        Ordering::Greater => {
-                            self.o_rh_cur_item = self.rh_iter.next();
-                        }
-                        Ordering::Equal => {
-                            self.o_lh_cur_item = self.lh_iter.next();
-                            self.o_rh_cur_item = self.rh_iter.next();
-                            return Some(lh_cur_item);
-                        }
-                    }
-                } else {
-                    return None;
-                }
-            } else {
-                return None;
-            }
-        }
-    }
-}
 
 macro_rules! define_map_op_iterator {
     ( $iter:ident ) => {
