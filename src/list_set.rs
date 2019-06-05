@@ -27,7 +27,7 @@ use std::slice::Iter;
 use std::vec::Drain;
 
 pub use crate::iterators::{Difference, Intersection, SetIter, SymmetricDifference, Union};
-use crate::list_map;
+pub use crate::list_map::{Keys, ListMap};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ListSet<T: Ord> {
@@ -137,7 +137,7 @@ impl<T: Ord> ListSet<T> {
         true
     }
 
-    pub fn is_map_disjoint<V>(&self, other: &list_map::ListMap<T, V>) -> bool {
+    pub fn is_map_disjoint<V>(&self, other: &ListMap<T, V>) -> bool {
         let mut self_iter = self.ordered_list.iter();
         let mut other_iter = other.keys();
         let mut o_self_cur_item = self_iter.next();
@@ -281,97 +281,20 @@ define_set_operation!(SymmetricDifference, symmetric_difference, BitXor, bitxor)
 define_set_operation!(Union, union, BitOr, bitor);
 define_set_operation!(Intersection, intersection, BitAnd, bitand);
 
-macro_rules! define_map_op_iterator {
-    ( $iter:ident ) => {
-        pub struct $iter<'a, T: Ord, V> {
-            o_set_cur_item: Option<&'a T>,
-            o_map_cur_item: Option<&'a T>,
-            set_iter: Iter<'a, T>,
-            map_iter: list_map::Keys<'a, T, V>,
-        }
-    };
-}
-
-macro_rules! define_map_op_iterator_function {
+macro_rules! define_set_map_operation {
     ( $iter:ident, $function:ident ) => {
         impl<T: Ord> ListSet<T> {
-            pub fn $function<'a, V>(
-                &'a self,
-                other: &'a list_map::ListMap<T, V>,
-            ) -> $iter<'a, T, V> {
-                let mut set_iter = self.ordered_list.iter();
-                let mut map_iter = other.keys();
-                $iter::<T, V> {
-                    o_set_cur_item: set_iter.next(),
-                    o_map_cur_item: map_iter.next(),
-                    set_iter: set_iter,
-                    map_iter: map_iter,
-                }
+            pub fn $function<'a, V>(&'a self, other: &'a ListMap<T, V>) -> $iter<'a, T, Iter<T>, Keys<T, V>> {
+                $iter::new(self.ordered_list.iter(), other.keys())
             }
         }
-    };
-}
-
-define_map_op_iterator!(MapDifference);
-define_map_op_iterator_function!(MapDifference, map_difference);
-
-impl<'a, T: Ord, V> Iterator for MapDifference<'a, T, V> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while let Some(set_cur_item) = self.o_set_cur_item {
-            if let Some(map_cur_item) = self.o_map_cur_item {
-                match set_cur_item.cmp(&map_cur_item) {
-                    Ordering::Less => {
-                        self.o_set_cur_item = self.set_iter.next();
-                        return Some(set_cur_item);
-                    }
-                    Ordering::Greater => {
-                        self.o_map_cur_item = self.map_iter.next();
-                    }
-                    Ordering::Equal => {
-                        self.o_set_cur_item = self.set_iter.next();
-                        self.o_map_cur_item = self.map_iter.next();
-                    }
-                }
-            } else {
-                self.o_set_cur_item = self.set_iter.next();
-                return Some(set_cur_item);
-            }
-        }
-        None
     }
 }
 
-define_map_op_iterator!(MapIntersection);
-define_map_op_iterator_function!(MapIntersection, map_intersection);
-
-impl<'a, T: Ord, V> Iterator for MapIntersection<'a, T, V> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while let Some(set_cur_item) = self.o_set_cur_item {
-            if let Some(map_cur_item) = self.o_map_cur_item {
-                match set_cur_item.cmp(&map_cur_item) {
-                    Ordering::Less => {
-                        self.o_set_cur_item = self.set_iter.next();
-                    }
-                    Ordering::Greater => {
-                        self.o_map_cur_item = self.map_iter.next();
-                    }
-                    Ordering::Equal => {
-                        self.o_set_cur_item = self.set_iter.next();
-                        self.o_map_cur_item = self.map_iter.next();
-                        return Some(set_cur_item);
-                    }
-                }
-            } else {
-                return None;
-            }
-        }
-        None
-    }
-}
+define_set_map_operation!(Union, map_union);
+define_set_map_operation!(Intersection, map_intersection);
+define_set_map_operation!(Difference, map_difference);
+define_set_map_operation!(SymmetricDifference, map_symmetric_difference);
 
 #[cfg(test)]
 mod tests {
