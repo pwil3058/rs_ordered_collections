@@ -297,6 +297,49 @@ where
     }
 }
 
+// Set Iterator
+pub struct SetIter<'a, T, I>
+where
+    T: 'a + Ord,
+    I: Iterator<Item = &'a T>,
+{
+    iter: I,
+}
+
+impl<'a, T, I> SetIter<'a, T, I>
+where
+    T: 'a + Ord,
+    I: Iterator<Item = &'a T>,
+{
+    pub fn new(iter: I) -> Self {
+        Self { iter: iter, }
+    }
+}
+
+impl<'a, T, I> Iterator for SetIter<'a, T, I>
+where
+    T: 'a + Ord,
+    I: Iterator<Item = &'a T>,
+{
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+impl<'a, T, I> SetOperations<'a, T, I> for SetIter<'a, T, I>
+where
+    T: 'a + Ord,
+    I: Iterator<Item = &'a T>,
+{}
+
+impl<'a, T, I> SetConversion<'a, T> for SetIter<'a, T, I>
+where
+    T: 'a + Ord + Clone,
+    I: Iterator<Item = &'a T>,
+{}
+
 #[cfg(test)]
 mod tests {
     use super::*;
