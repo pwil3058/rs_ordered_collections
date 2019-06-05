@@ -19,6 +19,7 @@
 extern crate rand;
 
 use std::cmp::Ordering;
+use std::convert::From;
 use std::default::Default;
 use std::iter::FromIterator;
 use std::ops::{BitAnd, BitOr, BitXor, Sub};
@@ -212,6 +213,15 @@ impl<T: Ord> Default for ListSet<T> {
         Self {
             ordered_list: vec![],
         }
+    }
+}
+
+/// Convert to ListSet<T> from ordered Vec<T> with no duplicates
+impl<T: Ord> From<Vec<T>> for ListSet<T> {
+    fn from(ordered_list: Vec<T>) -> Self {
+        let list = Self { ordered_list };
+        assert!(list.is_valid());
+        list
     }
 }
 
@@ -540,6 +550,19 @@ mod tests {
     fn default_works() {
         assert!(ListSet::<String>::default().len() == 0);
         assert!(ListSet::<u32>::default().len() == 0);
+    }
+
+    #[test]
+    fn check_constraints() {
+        // This is to chek what constraints are required for T
+        // to give full functionality to the sets
+        // Won't compile with Clone.
+        #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
+        struct Item { i: u32 }
+        let list_1 = ListSet::<Item>::default();
+        let list_2 = ListSet::<Item>::default();
+        let list_3 = list_1 | list_2;
+        assert!(list_3.len() == 0);
     }
 
     #[test]
