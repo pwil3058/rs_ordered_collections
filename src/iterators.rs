@@ -15,7 +15,6 @@
 ///! Iterators over the output of pairs of ordered Iterators applying
 ///! various filters. If the Iterators contain no duplicates as well
 ///! as bing sorted then the filter will produce set operations.
-
 use std::cmp::Ordering;
 
 use crate::list_set::ListSet;
@@ -77,21 +76,23 @@ macro_rules! define_set_operation {
             L: Iterator<Item = &'a T>,
             R: Iterator<Item = &'a T>,
             I: Iterator<Item = &'a T>,
-        {}
+        {
+        }
 
         impl<'a, T, L, R> SetConversion<'a, T> for $iter<'a, T, L, R>
         where
             T: 'a + Ord + Clone,
             L: Iterator<Item = &'a T>,
             R: Iterator<Item = &'a T>,
-        {}
-    }
+        {
+        }
+    };
 }
 
 define_set_operation!(
-doc = "An ordered Iterator over the set union of the output of two Iterators whose
+    doc = "An ordered Iterator over the set union of the output of two Iterators whose
 (individual) output is ordered and contains no duplicates.",
-Union
+    Union
 );
 
 impl<'a, T, L, R> Iterator for Union<'a, T, L, R>
@@ -136,9 +137,9 @@ where
 }
 
 define_set_operation!(
-doc = "An ordered Iterator over the set intersection of the output of two Iterators whose
+    doc = "An ordered Iterator over the set intersection of the output of two Iterators whose
 (individual) output is ordered and contains no duplicates.",
-Intersection
+    Intersection
 );
 
 impl<'a, T, L, R> Iterator for Intersection<'a, T, L, R>
@@ -177,9 +178,9 @@ where
 }
 
 define_set_operation!(
-doc = "An ordered Iterator over the set difference between the output of two
+    doc = "An ordered Iterator over the set difference between the output of two
 Iterators whose (individual) output is ordered and contains no duplicates.",
-Difference
+    Difference
 );
 
 impl<'a, T, L, R> Iterator for Difference<'a, T, L, R>
@@ -219,9 +220,9 @@ where
 }
 
 define_set_operation!(
-doc = "An ordered Iterator over the symmetric set difference between the output of two
+    doc = "An ordered Iterator over the symmetric set difference between the output of two
 Iterators whose (individual) output is ordered and contains no duplicates.",
-SymmetricDifference
+    SymmetricDifference
 );
 
 impl<'a, T, L, R> Iterator for SymmetricDifference<'a, T, L, R>
@@ -312,7 +313,7 @@ where
     I: Iterator<Item = &'a T>,
 {
     pub fn new(iter: I) -> Self {
-        Self { iter: iter, }
+        Self { iter: iter }
     }
 }
 
@@ -332,13 +333,15 @@ impl<'a, T, I> SetOperations<'a, T, I> for SetIter<'a, T, I>
 where
     T: 'a + Ord,
     I: Iterator<Item = &'a T>,
-{}
+{
+}
 
 impl<'a, T, I> SetConversion<'a, T> for SetIter<'a, T, I>
 where
     T: 'a + Ord + Clone,
     I: Iterator<Item = &'a T>,
-{}
+{
+}
 
 #[cfg(test)]
 mod tests {

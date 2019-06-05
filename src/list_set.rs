@@ -26,8 +26,8 @@ use std::ops::{BitAnd, BitOr, BitXor, Sub};
 use std::slice::Iter;
 use std::vec::Drain;
 
+pub use crate::iterators::{Difference, Intersection, SetIter, SymmetricDifference, Union};
 use crate::list_map;
-pub use crate::iterators::{SetIter, Union, Intersection, Difference, SymmetricDifference};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ListSet<T: Ord> {
@@ -413,7 +413,9 @@ mod tests {
         // to give full functionality to the sets
         // Won't compile with Clone.
         #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
-        struct Item { i: u32 }
+        struct Item {
+            i: u32,
+        }
         let list_1 = ListSet::<Item>::default();
         let list_2 = ListSet::<Item>::default();
         let list_3 = list_1 | list_2;
