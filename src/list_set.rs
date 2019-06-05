@@ -18,7 +18,6 @@
 
 extern crate rand;
 
-use std::cmp::Ordering;
 use std::convert::From;
 use std::default::Default;
 use std::iter::FromIterator;
@@ -28,6 +27,7 @@ use std::vec::Drain;
 
 pub use crate::iterators::{Difference, Intersection, SetIter, SymmetricDifference, Union};
 pub use crate::list_map::{Keys, ListMap};
+use crate::{a_contains_b, are_disjoint};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ListSet<T: Ord> {
@@ -113,99 +113,48 @@ impl<T: Ord> ListSet<T> {
     }
 
     pub fn is_disjoint(&self, other: &Self) -> bool {
-        let mut self_iter = self.ordered_list.iter();
-        let mut other_iter = other.ordered_list.iter();
-        let mut o_self_cur_item = self_iter.next();
-        let mut o_other_cur_item = other_iter.next();
-        while let Some(self_cur_item) = o_self_cur_item {
-            if let Some(other_cur_item) = o_other_cur_item {
-                match self_cur_item.cmp(&other_cur_item) {
-                    Ordering::Less => {
-                        o_self_cur_item = self_iter.next();
-                    }
-                    Ordering::Greater => {
-                        o_other_cur_item = other_iter.next();
-                    }
-                    Ordering::Equal => {
-                        return false;
-                    }
-                }
-            } else {
-                return true;
-            }
-        }
-        true
+        are_disjoint(
+            &mut self.ordered_list.iter(),
+            &mut other.ordered_list.iter(),
+        )
     }
 
     pub fn is_map_disjoint<V>(&self, other: &ListMap<T, V>) -> bool {
-        let mut self_iter = self.ordered_list.iter();
-        let mut other_iter = other.keys();
-        let mut o_self_cur_item = self_iter.next();
-        let mut o_other_cur_item = other_iter.next();
-        while let Some(self_cur_item) = o_self_cur_item {
-            if let Some(other_cur_item) = o_other_cur_item {
-                match self_cur_item.cmp(&other_cur_item) {
-                    Ordering::Less => {
-                        o_self_cur_item = self_iter.next();
-                    }
-                    Ordering::Greater => {
-                        o_other_cur_item = other_iter.next();
-                    }
-                    Ordering::Equal => {
-                        return false;
-                    }
-                }
-            } else {
-                return true;
-            }
-        }
-        true
-    }
-
-    fn a_contains_b(a: &Self, b: &Self) -> bool {
-        let mut a_iter = a.ordered_list.iter();
-        let mut o_a_cur_item = a_iter.next();
-        let mut b_iter = b.ordered_list.iter();
-        let mut o_b_cur_item = b_iter.next();
-        while let Some(b_cur_item) = o_b_cur_item {
-            if let Some(a_cur_item) = o_a_cur_item {
-                match b_cur_item.cmp(&a_cur_item) {
-                    Ordering::Less => {
-                        return false;
-                    }
-                    Ordering::Greater => {
-                        o_a_cur_item = a_iter.next();
-                    }
-                    Ordering::Equal => {
-                        o_b_cur_item = b_iter.next();
-                        o_a_cur_item = a_iter.next();
-                    }
-                }
-            } else {
-                return false;
-            }
-        }
-        true
+        are_disjoint(&mut self.ordered_list.iter(), &mut other.keys())
     }
 
     /// Return true if self is a subset of other
     pub fn is_subset(&self, other: &Self) -> bool {
-        Self::a_contains_b(other, self)
+        a_contains_b(
+            &mut other.ordered_list.iter(),
+            &mut self.ordered_list.iter(),
+        )
     }
 
     /// Return true if self is a subset of other
     pub fn is_proper_subset(&self, other: &Self) -> bool {
-        other.len() > self.len() && Self::a_contains_b(other, self)
+        other.len() > self.len()
+            && a_contains_b(
+                &mut other.ordered_list.iter(),
+                &mut self.ordered_list.iter(),
+            )
     }
 
     /// Return true if self is a superset of other
     pub fn is_superset(&self, other: &Self) -> bool {
-        Self::a_contains_b(self, other)
+        a_contains_b(
+            &mut self.ordered_list.iter(),
+            &mut other.ordered_list.iter(),
+        )
     }
 
     /// Return true if self is a superset of other
     pub fn is_proper_superset(&self, other: &Self) -> bool {
-        self.len() > other.len() && Self::a_contains_b(self, other)
+        self.len() > other.len()
+            && a_contains_b(
+                &mut self.ordered_list.iter(),
+                &mut other.ordered_list.iter(),
+            )
     }
 }
 
@@ -284,11 +233,14 @@ define_set_operation!(Intersection, intersection, BitAnd, bitand);
 macro_rules! define_set_map_operation {
     ( $iter:ident, $function:ident ) => {
         impl<T: Ord> ListSet<T> {
-            pub fn $function<'a, V>(&'a self, other: &'a ListMap<T, V>) -> $iter<'a, T, Iter<T>, Keys<T, V>> {
+            pub fn $function<'a, V>(
+                &'a self,
+                other: &'a ListMap<T, V>,
+            ) -> $iter<'a, T, Iter<T>, Keys<T, V>> {
                 $iter::new(self.ordered_list.iter(), other.keys())
             }
         }
-    }
+    };
 }
 
 define_set_map_operation!(Union, map_union);
