@@ -25,7 +25,7 @@ use std::ops::{BitAnd, BitOr, BitXor, Sub};
 use std::slice::Iter;
 use std::vec::Drain;
 
-pub use crate::iterators::{Difference, Intersection, SetIter, SymmetricDifference, Union};
+pub use crate::iterators::*;
 pub use crate::list_map::{Keys, ListMap};
 use crate::{a_contains_b, are_disjoint};
 
@@ -199,6 +199,7 @@ impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for ListSet<T> {
     }
 }
 
+// TODO: add doc strings to arguments for these macros.
 macro_rules! define_set_operation {
     ( $iter:ident, $function:ident, $op:ident, $op_fn:ident  ) => {
         impl<T: Ord> ListSet<T> {
@@ -211,7 +212,7 @@ macro_rules! define_set_operation {
             type Output = Self;
 
             fn $op_fn(self, other: Self) -> Self::Output {
-                self.$function(&other).collect()
+                self.$function(&other).to_list_set()
             }
         }
 
@@ -219,7 +220,7 @@ macro_rules! define_set_operation {
             type Output = ListSet<T>;
 
             fn $op_fn(self, other: Self) -> Self::Output {
-                self.$function(&other).cloned().collect()
+                self.$function(&other).to_list_set()
             }
         }
     };
