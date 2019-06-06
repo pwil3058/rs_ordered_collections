@@ -201,10 +201,14 @@ impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for ListSet<T> {
 
 // TODO: add doc strings to arguments for these macros.
 macro_rules! define_set_operation {
-    ( $iter:ident, $function:ident, $op:ident, $op_fn:ident  ) => {
+    ( $iter:ident, $function:ident, $osi_function:ident, $op:ident, $op_fn:ident  ) => {
         impl<T: Ord> ListSet<T> {
             pub fn $function<'a>(&'a self, other: &'a Self) -> $iter<'a, T, Iter<T>, Iter<T>> {
                 $iter::new(self.ordered_list.iter(), other.ordered_list.iter())
+            }
+
+            pub fn $osi_function<'a, I: Iterator<Item=&'a T>>(&'a self, other_iter: I) -> $iter<'a, T, Iter<T>, I> {
+                $iter::new(self.ordered_list.iter(), other_iter)
             }
         }
 
@@ -226,10 +230,10 @@ macro_rules! define_set_operation {
     };
 }
 
-define_set_operation!(Difference, difference, Sub, sub);
-define_set_operation!(SymmetricDifference, symmetric_difference, BitXor, bitxor);
-define_set_operation!(Union, union, BitOr, bitor);
-define_set_operation!(Intersection, intersection, BitAnd, bitand);
+define_set_operation!(Difference, difference, osi_difference, Sub, sub);
+define_set_operation!(SymmetricDifference, symmetric_difference, osi_symmetric_difference, BitXor, bitxor);
+define_set_operation!(Union, union, osi_union, BitOr, bitor);
+define_set_operation!(Intersection, intersection, osi_intersection, BitAnd, bitand);
 
 macro_rules! define_set_map_operation {
     ( $iter:ident, $function:ident ) => {

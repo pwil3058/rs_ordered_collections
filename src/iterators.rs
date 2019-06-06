@@ -329,10 +329,11 @@ where
     }
 }
 
-impl<'a, T, I> SetOperations<'a, T, I> for SetIter<'a, T, I>
+impl<'a, T, I, O> SetOperations<'a, T, O> for SetIter<'a, T, I>
 where
     T: 'a + Ord,
     I: Iterator<Item = &'a T>,
+    O: Iterator<Item = &'a T>,
 {
 }
 
