@@ -16,6 +16,8 @@ use std::default::Default;
 use std::slice::{Iter, IterMut};
 use std::vec::Drain;
 
+use crate::iterators::{SetConversion, SetOperations};
+
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ListMap<K: Ord, V> {
     ordered_list: Vec<(K, V)>,
@@ -155,6 +157,15 @@ impl<'a, K: Ord, V> Iterator for Keys<'a, K, V> {
         }
     }
 }
+
+impl<'a, K, V, I> SetOperations<'a, K, I> for Keys<'a, K, V>
+where
+    K: 'a + Ord,
+    I: Iterator<Item = &'a K>,
+{
+}
+
+impl<'a, K, V> SetConversion<'a, K> for Keys<'a, K, V> where K: 'a + Ord + Clone {}
 
 pub struct Values<'a, K, V> {
     iter: Iter<'a, (K, V)>,

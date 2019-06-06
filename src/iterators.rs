@@ -265,7 +265,7 @@ where
     }
 }
 
-trait SetOperations<'a, T, I>: Iterator<Item = &'a T> + Sized
+pub trait SetOperations<'a, T, I>: Iterator<Item = &'a T> + Sized
 where
     T: 'a + Ord,
     I: Iterator<Item = &'a T>,
@@ -287,7 +287,7 @@ where
     }
 }
 
-trait SetConversion<'a, T>: Iterator<Item = &'a T>
+pub trait SetConversion<'a, T>: Iterator<Item = &'a T>
 where
     T: 'a + Ord + Clone,
 {
