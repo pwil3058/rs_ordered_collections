@@ -26,15 +26,15 @@ use std::slice::Iter;
 use std::vec::Drain;
 
 pub use crate::iterators::*;
-pub use crate::list_map::{Keys, ListMap};
+pub use crate::list_map::{Keys, OrderedMap};
 use crate::{a_contains_b, are_disjoint};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct ListSet<T: Ord> {
+pub struct OrderedSet<T: Ord> {
     ordered_list: Vec<T>,
 }
 
-impl<T: Ord> ListSet<T> {
+impl<T: Ord> OrderedSet<T> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -119,7 +119,7 @@ impl<T: Ord> ListSet<T> {
         )
     }
 
-    pub fn is_map_disjoint<V>(&self, other: &ListMap<T, V>) -> bool {
+    pub fn is_map_disjoint<V>(&self, other: &OrderedMap<T, V>) -> bool {
         are_disjoint(&mut self.ordered_list.iter(), &mut other.keys())
     }
 
@@ -158,7 +158,7 @@ impl<T: Ord> ListSet<T> {
     }
 }
 
-impl<T: Ord> Default for ListSet<T> {
+impl<T: Ord> Default for OrderedSet<T> {
     fn default() -> Self {
         Self {
             ordered_list: vec![],
@@ -166,8 +166,8 @@ impl<T: Ord> Default for ListSet<T> {
     }
 }
 
-/// Convert to ListSet<T> from ordered Vec<T> with no duplicates
-impl<T: Ord> From<Vec<T>> for ListSet<T> {
+/// Convert to OrderedSet<T> from ordered Vec<T> with no duplicates
+impl<T: Ord> From<Vec<T>> for OrderedSet<T> {
     fn from(ordered_list: Vec<T>) -> Self {
         let list = Self { ordered_list };
         assert!(list.is_valid());
@@ -175,9 +175,9 @@ impl<T: Ord> From<Vec<T>> for ListSet<T> {
     }
 }
 
-impl<T: Ord> FromIterator<T> for ListSet<T> {
+impl<T: Ord> FromIterator<T> for OrderedSet<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let mut list_set = ListSet::<T>::default();
+        let mut list_set = OrderedSet::<T>::default();
 
         for i in iter {
             list_set.insert(i);
@@ -187,9 +187,9 @@ impl<T: Ord> FromIterator<T> for ListSet<T> {
     }
 }
 
-impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for ListSet<T> {
+impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for OrderedSet<T> {
     fn from_iter<I: IntoIterator<Item = &'a T>>(iter: I) -> Self {
-        let mut list_set = ListSet::<T>::default();
+        let mut list_set = OrderedSet::<T>::default();
 
         for i in iter.into_iter().cloned() {
             list_set.insert(i);
@@ -202,7 +202,7 @@ impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for ListSet<T> {
 // TODO: add doc strings to arguments for these macros.
 macro_rules! define_set_operation {
     ( $iter:ident, $function:ident, $osi_function:ident, $op:ident, $op_fn:ident  ) => {
-        impl<T: Ord> ListSet<T> {
+        impl<T: Ord> OrderedSet<T> {
             pub fn $function<'a>(&'a self, other: &'a Self) -> $iter<'a, T, Iter<T>, Iter<T>> {
                 $iter::new(self.ordered_list.iter(), other.ordered_list.iter())
             }
@@ -215,19 +215,19 @@ macro_rules! define_set_operation {
             }
         }
 
-        impl<T: Ord + Clone> $op for ListSet<T> {
+        impl<T: Ord + Clone> $op for OrderedSet<T> {
             type Output = Self;
 
             fn $op_fn(self, other: Self) -> Self::Output {
-                self.$function(&other).to_list_set()
+                self.$function(&other).to_set()
             }
         }
 
-        impl<T: Ord + Clone> $op for &ListSet<T> {
-            type Output = ListSet<T>;
+        impl<T: Ord + Clone> $op for &OrderedSet<T> {
+            type Output = OrderedSet<T>;
 
             fn $op_fn(self, other: Self) -> Self::Output {
-                self.$function(&other).to_list_set()
+                self.$function(&other).to_set()
             }
         }
     };
@@ -246,10 +246,10 @@ define_set_operation!(Intersection, intersection, osi_intersection, BitAnd, bita
 
 macro_rules! define_set_map_operation {
     ( $iter:ident, $function:ident ) => {
-        impl<T: Ord> ListSet<T> {
+        impl<T: Ord> OrderedSet<T> {
             pub fn $function<'a, V>(
                 &'a self,
-                other: &'a ListMap<T, V>,
+                other: &'a OrderedMap<T, V>,
             ) -> $iter<'a, T, Iter<T>, Keys<T, V>> {
                 $iter::new(self.ordered_list.iter(), other.keys())
             }
@@ -292,8 +292,8 @@ mod tests {
 
     #[test]
     fn default_works() {
-        assert!(ListSet::<String>::default().len() == 0);
-        assert!(ListSet::<u32>::default().len() == 0);
+        assert!(OrderedSet::<String>::default().len() == 0);
+        assert!(OrderedSet::<u32>::default().len() == 0);
     }
 
     #[test]
@@ -305,15 +305,15 @@ mod tests {
         struct Item {
             i: u32,
         }
-        let list_1 = ListSet::<Item>::default();
-        let list_2 = ListSet::<Item>::default();
+        let list_1 = OrderedSet::<Item>::default();
+        let list_2 = OrderedSet::<Item>::default();
         let list_3 = list_1 | list_2;
         assert!(list_3.len() == 0);
     }
 
     #[test]
     fn insert_works() {
-        let mut str_set = ListSet::<String>::default();
+        let mut str_set = OrderedSet::<String>::default();
         assert!(str_set.is_valid());
         assert!(str_set.first().is_none());
         for text in TEST_STRS.iter() {
@@ -334,7 +334,7 @@ mod tests {
 
     #[test]
     fn from_iter_works() {
-        let str_set: ListSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
+        let str_set: OrderedSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
         assert!(str_set.is_valid());
         for text in TEST_STRS.iter() {
             assert!(str_set.contains(&text.to_string()))
@@ -345,7 +345,7 @@ mod tests {
 
         let u64_seq = random_sequence(1000);
         assert_eq!(u64_seq.len(), 1000);
-        let u64_set: ListSet<u64> = u64_seq.iter().map(|u| *u).collect();
+        let u64_set: OrderedSet<u64> = u64_seq.iter().map(|u| *u).collect();
         assert!(u64_set.is_valid());
         for u in u64_seq.iter() {
             assert!(u64_set.contains(u));
@@ -358,7 +358,7 @@ mod tests {
 
     #[test]
     fn iter_after_works() {
-        let str_set: ListSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
+        let str_set: OrderedSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
         for item in str_set.iter_after(&"jjj".to_string()) {
             assert!(item > &"jjj".to_string());
             assert!(TEST_STRS.contains(&item.as_str()));
@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn remove_works() {
-        let mut str_set: ListSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
+        let mut str_set: OrderedSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
         for text in TEST_STRS.iter() {
             assert!(str_set.remove(&text.to_string()));
             assert!(!str_set.remove(&text.to_string()));
@@ -381,8 +381,8 @@ mod tests {
 
     #[test]
     fn equality_and_hash_work() {
-        let str_set1: ListSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
-        let mut str_set2: ListSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
+        let str_set1: OrderedSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
+        let mut str_set2: OrderedSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
         assert_eq!(str_set1, str_set2);
         assert_eq!(calculate_hash(&str_set1), calculate_hash(&str_set2));
         assert!(str_set2.remove(&TEST_STRS.first().unwrap().to_string()));
@@ -392,21 +392,21 @@ mod tests {
 
     #[test]
     fn test_is_disjoint() {
-        let str_set1: ListSet<String> =
+        let str_set1: OrderedSet<String> =
             TEST_STRS[0..5].into_iter().map(|s| s.to_string()).collect();
-        let str_set2: ListSet<String> = TEST_STRS[5..].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: OrderedSet<String> = TEST_STRS[5..].into_iter().map(|s| s.to_string()).collect();
         assert!(str_set1.is_disjoint(&str_set2));
-        let str_set1: ListSet<String> =
+        let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
-        let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         assert!(!str_set1.is_disjoint(&str_set2));
 
         let u64_seq = random_sequence(1000);
-        let set1: ListSet<u64> = u64_seq[0..500].iter().map(|u| *u).collect();
-        let set2: ListSet<u64> = u64_seq[500..].iter().map(|u| *u).collect();
+        let set1: OrderedSet<u64> = u64_seq[0..500].iter().map(|u| *u).collect();
+        let set2: OrderedSet<u64> = u64_seq[500..].iter().map(|u| *u).collect();
         assert!(set1.is_disjoint(&set2));
-        let set1: ListSet<u64> = u64_seq[0..700].iter().map(|u| *u).collect();
-        let set2: ListSet<u64> = u64_seq[300..].iter().map(|u| *u).collect();
+        let set1: OrderedSet<u64> = u64_seq[0..700].iter().map(|u| *u).collect();
+        let set2: OrderedSet<u64> = u64_seq[300..].iter().map(|u| *u).collect();
         assert!(!set1.is_disjoint(&set2));
     }
 
@@ -422,11 +422,11 @@ mod tests {
             ((1, max), (1, 7), false, false),
         ] {
             println!("TEST: {:?}", test); // to help identify failed tests
-            let set1: ListSet<String> = TEST_STRS[(test.0).0..(test.0).1]
+            let set1: OrderedSet<String> = TEST_STRS[(test.0).0..(test.0).1]
                 .into_iter()
                 .map(|s| s.to_string())
                 .collect();
-            let set2: ListSet<String> = TEST_STRS[(test.1).0..(test.1).1]
+            let set2: OrderedSet<String> = TEST_STRS[(test.1).0..(test.1).1]
                 .into_iter()
                 .map(|s| s.to_string())
                 .collect();
@@ -452,11 +452,11 @@ mod tests {
             ((1, max), (1, 7), true, true),
         ] {
             println!("TEST: {:?}", test); // to help identify failed tests
-            let set1: ListSet<String> = TEST_STRS[(test.0).0..(test.0).1]
+            let set1: OrderedSet<String> = TEST_STRS[(test.0).0..(test.0).1]
                 .into_iter()
                 .map(|s| s.to_string())
                 .collect();
-            let set2: ListSet<String> = TEST_STRS[(test.1).0..(test.1).1]
+            let set2: OrderedSet<String> = TEST_STRS[(test.1).0..(test.1).1]
                 .into_iter()
                 .map(|s| s.to_string())
                 .collect();
@@ -472,10 +472,10 @@ mod tests {
 
     #[test]
     fn test_difference() {
-        let str_set1: ListSet<String> =
+        let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
-        let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
-        let expected: ListSet<String> =
+        let str_set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let expected: OrderedSet<String> =
             TEST_STRS[0..4].into_iter().map(|s| s.to_string()).collect();
         let result = str_set1 - str_set2;
         assert!(result.is_valid());
@@ -484,10 +484,10 @@ mod tests {
 
     #[test]
     fn test_symmetric_difference() {
-        let str_set1: ListSet<String> =
+        let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
-        let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
-        let mut expected: ListSet<String> =
+        let str_set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let mut expected: OrderedSet<String> =
             TEST_STRS[0..4].into_iter().map(|s| s.to_string()).collect();
         for item in TEST_STRS[8..].into_iter().map(|s| s.to_string()) {
             expected.insert(item);
@@ -499,10 +499,10 @@ mod tests {
 
     #[test]
     fn test_union() {
-        let str_set1: ListSet<String> =
+        let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
-        let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
-        let expected: ListSet<String> = TEST_STRS[0..].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let expected: OrderedSet<String> = TEST_STRS[0..].into_iter().map(|s| s.to_string()).collect();
         let result = str_set1 | str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
@@ -510,10 +510,10 @@ mod tests {
 
     #[test]
     fn test_intersection() {
-        let str_set1: ListSet<String> =
+        let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
-        let str_set2: ListSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
-        let expected: ListSet<String> =
+        let str_set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let expected: OrderedSet<String> =
             TEST_STRS[4..8].into_iter().map(|s| s.to_string()).collect();
         let result = str_set1 & str_set2;
         assert!(result.is_valid());

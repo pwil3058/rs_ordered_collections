@@ -17,7 +17,7 @@
 ///! as bing sorted then the filter will produce set operations.
 use std::cmp::Ordering;
 
-use crate::list_set::ListSet;
+use crate::list_set::OrderedSet;
 
 /// Return true if the data stream from the Iterator is ordered and
 /// contains no duplicates.  Useful for testing.
@@ -291,10 +291,10 @@ pub trait SetConversion<'a, T>: Iterator<Item = &'a T>
 where
     T: 'a + Ord + Clone,
 {
-    /// Create a ListSet<T> from the items in the Iterator's output
-    fn to_list_set(&mut self) -> ListSet<T> {
+    /// Create a OrderedSet<T> from the items in the Iterator's output
+    fn to_set(&mut self) -> OrderedSet<T> {
         let ordered_list: Vec<T> = self.cloned().collect();
-        ListSet::<T>::from(ordered_list)
+        OrderedSet::<T>::from(ordered_list)
     }
 }
 
@@ -382,7 +382,7 @@ mod tests {
         assert_eq!(result, vec!["a", "c", "d", "e", "f"]);
         let set = Union::new(LIST_0[..3].iter(), LIST_2[..2].iter())
             .symmetric_difference(LIST_1[..3].iter())
-            .to_list_set();
+            .to_set();
         let vec: Vec<&str> = set.iter().cloned().collect();
         assert_eq!(vec, vec!["a", "c", "d", "e", "f"]);
     }
@@ -406,7 +406,7 @@ mod tests {
         assert_eq!(result, vec!["a", "b", "d", "f"]);
         let set = Intersection::new(LIST_0[..3].iter(), LIST_2[..2].iter())
             .symmetric_difference(LIST_1[..3].iter())
-            .to_list_set();
+            .to_set();
         let vec: Vec<&str> = set.iter().cloned().collect();
         assert_eq!(vec, vec!["a", "b", "d", "f"]);
     }
@@ -430,7 +430,7 @@ mod tests {
         assert_eq!(result, vec!["b", "c", "d", "e", "f"]);
         let set = Difference::new(LIST_0[..3].iter(), LIST_2[..2].iter())
             .symmetric_difference(LIST_1[..3].iter())
-            .to_list_set();
+            .to_set();
         let vec: Vec<&str> = set.iter().cloned().collect();
         assert_eq!(vec, vec!["b", "c", "d", "e", "f"]);
     }
@@ -454,7 +454,7 @@ mod tests {
         assert_eq!(result, vec!["c", "d", "e", "f"]);
         let set = SymmetricDifference::new(LIST_0[..3].iter(), LIST_2[..2].iter())
             .symmetric_difference(LIST_1[..3].iter())
-            .to_list_set();
+            .to_set();
         let vec: Vec<&str> = set.iter().cloned().collect();
         assert_eq!(vec, vec!["c", "d", "e", "f"]);
     }

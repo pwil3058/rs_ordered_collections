@@ -19,11 +19,11 @@ use std::vec::Drain;
 use crate::iterators::{SetConversion, SetOperations};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct ListMap<K: Ord, V> {
+pub struct OrderedMap<K: Ord, V> {
     ordered_list: Vec<(K, V)>,
 }
 
-impl<K: Ord, V> Default for ListMap<K, V> {
+impl<K: Ord, V> Default for OrderedMap<K, V> {
     fn default() -> Self {
         Self {
             ordered_list: vec![],
@@ -31,7 +31,7 @@ impl<K: Ord, V> Default for ListMap<K, V> {
     }
 }
 
-impl<K: Ord, V> ListMap<K, V> {
+impl<K: Ord, V> OrderedMap<K, V> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -248,14 +248,14 @@ mod tests {
 
     #[test]
     fn map_default_works() {
-        let map = ListMap::<u32, u32>::default();
+        let map = OrderedMap::<u32, u32>::default();
         assert_eq!(map.len(), 0);
         assert!(map.is_empty());
     }
 
     #[test]
     fn map_basic_functionality() {
-        let mut map = ListMap::<&str, (&str, u32)>::default();
+        let mut map = OrderedMap::<&str, (&str, u32)>::default();
         for (key, value) in TEST_ITEMS_0.iter() {
             println!("{:?} => {:?}", key, value);
             assert!(map.insert(key, *value).is_none());
