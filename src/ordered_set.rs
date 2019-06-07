@@ -26,7 +26,7 @@ use std::slice::Iter;
 use std::vec::Drain;
 
 pub use crate::iterators::*;
-pub use crate::list_map::{Keys, OrderedMap};
+pub use crate::ordered_map::{Keys, OrderedMap};
 use crate::{a_contains_b, are_disjoint};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -38,7 +38,6 @@ impl<T: Ord> OrderedSet<T> {
     pub fn new() -> Self {
         Self::default()
     }
-
     /// Return the number of items in this set.
     pub fn len(&self) -> usize {
         self.ordered_list.len()
@@ -177,25 +176,25 @@ impl<T: Ord> From<Vec<T>> for OrderedSet<T> {
 
 impl<T: Ord> FromIterator<T> for OrderedSet<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let mut list_set = OrderedSet::<T>::default();
+        let mut ordered_set = OrderedSet::<T>::default();
 
         for i in iter {
-            list_set.insert(i);
+            ordered_set.insert(i);
         }
 
-        list_set
+        ordered_set
     }
 }
 
 impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for OrderedSet<T> {
     fn from_iter<I: IntoIterator<Item = &'a T>>(iter: I) -> Self {
-        let mut list_set = OrderedSet::<T>::default();
+        let mut ordered_set = OrderedSet::<T>::default();
 
         for i in iter.into_iter().cloned() {
-            list_set.insert(i);
+            ordered_set.insert(i);
         }
 
-        list_set
+        ordered_set
     }
 }
 

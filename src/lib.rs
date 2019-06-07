@@ -22,8 +22,8 @@ use std::cmp::Ordering;
 use std::iter::Iterator;
 
 pub mod iterators;
-pub mod list_map;
-pub mod list_set;
+pub mod ordered_map;
+pub mod ordered_set;
 
 pub fn are_disjoint<'a, T, L, R>(l_iter: &mut L, r_iter: &mut R) -> bool
 where

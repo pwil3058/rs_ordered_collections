@@ -17,7 +17,7 @@
 ///! as bing sorted then the filter will produce set operations.
 use std::cmp::Ordering;
 
-use crate::list_set::OrderedSet;
+use crate::ordered_set::OrderedSet;
 
 /// Return true if the data stream from the Iterator is ordered and
 /// contains no duplicates.  Useful for testing.
