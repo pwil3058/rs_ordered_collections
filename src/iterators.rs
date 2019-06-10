@@ -413,6 +413,8 @@ mod tests {
 
     #[test]
     fn difference() {
+        let mut test_iter = Difference::new(LIST_0[..1].iter(), LIST_0[..1].iter());
+        assert_eq!(test_iter.next(), None);
         let mut test_iter = Difference::new(LIST_0[..3].iter(), LIST_1[..2].iter());
         assert_eq!(test_iter.next(), Some(&"a"));
         let result: Vec<&str> = Difference::new(LIST_0[..3].iter(), LIST_1[..2].iter())
