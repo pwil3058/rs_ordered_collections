@@ -71,7 +71,7 @@ macro_rules! define_set_operation {
             }
         }
 
-        impl<'a, T, L, R, I> SetOperations<'a, T, I> for $iter<'a, T, L, R>
+        impl<'a, T, L, R, I> IterSetOperations<'a, T, I> for $iter<'a, T, L, R>
         where
             T: 'a + Ord,
             L: Iterator<Item = &'a T>,
@@ -266,24 +266,24 @@ where
     }
 }
 
-pub trait SetOperations<'a, T, I>: Iterator<Item = &'a T> + Sized
+pub trait IterSetOperations<'a, T, I>: Iterator<Item = &'a T> + Sized
 where
     T: 'a + Ord,
     I: Iterator<Item = &'a T>,
 {
-    fn union(self, iter: I) -> Union<'a, T, Self, I> {
+    fn osi_union(self, iter: I) -> Union<'a, T, Self, I> {
         Union::new(self, iter)
     }
 
-    fn intersection(self, iter: I) -> Intersection<'a, T, Self, I> {
+    fn osi_intersection(self, iter: I) -> Intersection<'a, T, Self, I> {
         Intersection::new(self, iter)
     }
 
-    fn difference(self, iter: I) -> Difference<'a, T, Self, I> {
+    fn osi_difference(self, iter: I) -> Difference<'a, T, Self, I> {
         Difference::new(self, iter)
     }
 
-    fn symmetric_difference(self, iter: I) -> SymmetricDifference<'a, T, Self, I> {
+    fn osi_symmetric_difference(self, iter: I) -> SymmetricDifference<'a, T, Self, I> {
         SymmetricDifference::new(self, iter)
     }
 }
@@ -330,7 +330,7 @@ where
     }
 }
 
-impl<'a, T, I, O> SetOperations<'a, T, O> for SetIter<'a, T, I>
+impl<'a, T, I, O> IterSetOperations<'a, T, O> for SetIter<'a, T, I>
 where
     T: 'a + Ord,
     I: Iterator<Item = &'a T>,
