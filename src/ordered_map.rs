@@ -178,10 +178,9 @@ impl<'a, K: Ord, V> Iterator for Keys<'a, K, V> {
     }
 }
 
-impl<'a, K, V, I> IterSetOperations<'a, K, I> for Keys<'a, K, V>
+impl<'a, K, V> IterSetOperations<'a, K> for Keys<'a, K, V>
 where
     K: 'a + Ord,
-    I: Iterator<Item = &'a K>,
 {
 }
 
