@@ -12,8 +12,8 @@
 //See the License for the specific language governing permissions and
 //limitations under the License.
 
-use std::default::Default;
 use std::convert::From;
+use std::default::Default;
 use std::slice::{Iter, IterMut};
 use std::vec::Drain;
 
@@ -80,7 +80,10 @@ impl<K: Ord, V> OrderedMap<K, V> {
         MapIter::new(self.ordered_list.iter())
     }
 
-    pub fn merge<'a>(&'a self, other: &'a Self) -> MapMergeIter<'a, K, V, Iter<(K, V)>, Iter<(K, V)>> {
+    pub fn merge<'a>(
+        &'a self,
+        other: &'a Self,
+    ) -> MapMergeIter<'a, K, V, Iter<(K, V)>, Iter<(K, V)>> {
         MapMergeIter::new(self.ordered_list.iter(), other.ordered_list.iter())
     }
 
@@ -96,11 +99,15 @@ impl<K: Ord, V> OrderedMap<K, V> {
     }
 
     pub fn keys(&self) -> Keys<K, V> {
-        Keys { iter: self.ordered_list.iter() }
+        Keys {
+            iter: self.ordered_list.iter(),
+        }
     }
 
     pub fn values(&self) -> Values<K, V> {
-        Values { iter: self.ordered_list.iter() }
+        Values {
+            iter: self.ordered_list.iter(),
+        }
     }
 
     pub fn values_mut<'a>(&'a mut self) -> ValuesMut<'a, K, V> {

@@ -370,7 +370,8 @@ mod tests {
 
     #[test]
     fn remove_works() {
-        let mut str_set: OrderedSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
+        let mut str_set: OrderedSet<String> =
+            TEST_STRS.into_iter().map(|s| s.to_string()).collect();
         for text in TEST_STRS.iter() {
             assert!(str_set.remove(&text.to_string()));
             assert!(!str_set.remove(&text.to_string()));
@@ -381,7 +382,8 @@ mod tests {
     #[test]
     fn equality_and_hash_work() {
         let str_set1: OrderedSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
-        let mut str_set2: OrderedSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
+        let mut str_set2: OrderedSet<String> =
+            TEST_STRS.into_iter().map(|s| s.to_string()).collect();
         assert_eq!(str_set1, str_set2);
         assert_eq!(calculate_hash(&str_set1), calculate_hash(&str_set2));
         assert!(str_set2.remove(&TEST_STRS.first().unwrap().to_string()));
@@ -393,11 +395,13 @@ mod tests {
     fn test_is_disjoint() {
         let str_set1: OrderedSet<String> =
             TEST_STRS[0..5].into_iter().map(|s| s.to_string()).collect();
-        let str_set2: OrderedSet<String> = TEST_STRS[5..].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: OrderedSet<String> =
+            TEST_STRS[5..].into_iter().map(|s| s.to_string()).collect();
         assert!(str_set1.is_disjoint(&str_set2));
         let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
-        let str_set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: OrderedSet<String> =
+            TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         assert!(!str_set1.is_disjoint(&str_set2));
 
         let u64_seq = random_sequence(1000);
@@ -473,7 +477,8 @@ mod tests {
     fn test_difference() {
         let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
-        let str_set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: OrderedSet<String> =
+            TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         let expected: OrderedSet<String> =
             TEST_STRS[0..4].into_iter().map(|s| s.to_string()).collect();
         let result = str_set1 - str_set2;
@@ -485,7 +490,8 @@ mod tests {
     fn test_symmetric_difference() {
         let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
-        let str_set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: OrderedSet<String> =
+            TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         let mut expected: OrderedSet<String> =
             TEST_STRS[0..4].into_iter().map(|s| s.to_string()).collect();
         for item in TEST_STRS[8..].into_iter().map(|s| s.to_string()) {
@@ -500,8 +506,10 @@ mod tests {
     fn test_union() {
         let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
-        let str_set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
-        let expected: OrderedSet<String> = TEST_STRS[0..].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: OrderedSet<String> =
+            TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let expected: OrderedSet<String> =
+            TEST_STRS[0..].into_iter().map(|s| s.to_string()).collect();
         let result = str_set1 | str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
@@ -511,7 +519,8 @@ mod tests {
     fn test_intersection() {
         let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
-        let str_set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let str_set2: OrderedSet<String> =
+            TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         let expected: OrderedSet<String> =
             TEST_STRS[4..8].into_iter().map(|s| s.to_string()).collect();
         let result = str_set1 & str_set2;
