@@ -13,10 +13,11 @@
 //limitations under the License.
 
 use std::default::Default;
+use std::convert::From;
 use std::slice::{Iter, IterMut};
 use std::vec::Drain;
 
-use crate::iterators::{SetConversion, SetOperations};
+use crate::iterators::{MapIter, MapMergeIter, SetConversion, SetOperations};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct OrderedMap<K: Ord, V> {
@@ -75,8 +76,12 @@ impl<K: Ord, V> OrderedMap<K, V> {
         self.ordered_list.drain(..)
     }
 
-    pub fn iter(&self) -> Iter<(K, V)> {
-        self.ordered_list.iter()
+    pub fn iter(&self) -> MapIter<K, V, Iter<(K, V)>> {
+        MapIter::new(self.ordered_list.iter())
+    }
+
+    pub fn merge<'a>(&'a self, other: &'a Self) -> MapMergeIter<'a, K, V, Iter<(K, V)>, Iter<(K, V)>> {
+        MapMergeIter::new(self.ordered_list.iter(), other.ordered_list.iter())
     }
 
     fn iter_mut(&mut self) -> IterMut<(K, V)> {
@@ -91,11 +96,11 @@ impl<K: Ord, V> OrderedMap<K, V> {
     }
 
     pub fn keys(&self) -> Keys<K, V> {
-        Keys { iter: self.iter() }
+        Keys { iter: self.ordered_list.iter() }
     }
 
     pub fn values(&self) -> Values<K, V> {
-        Values { iter: self.iter() }
+        Values { iter: self.ordered_list.iter() }
     }
 
     pub fn values_mut<'a>(&'a mut self) -> ValuesMut<'a, K, V> {
@@ -139,6 +144,14 @@ impl<K: Ord, V> OrderedMap<K, V> {
             Ok(index) => Some(self.ordered_list.remove(index).1),
             Err(_) => None,
         }
+    }
+}
+/// Convert to OrderedMap<K, V> from ordered Vec<(K, V)> with no duplicates
+impl<K: Ord, V> From<Vec<(K, V)>> for OrderedMap<K, V> {
+    fn from(ordered_list: Vec<(K, V)>) -> Self {
+        let list = Self { ordered_list };
+        assert!(list.is_valid());
+        list
     }
 }
 

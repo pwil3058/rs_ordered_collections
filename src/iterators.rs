@@ -18,6 +18,7 @@
 use std::cmp::Ordering;
 
 use crate::ordered_set::OrderedSet;
+use crate::ordered_map::OrderedMap;
 
 /// Return true if the data stream from the Iterator is ordered and
 /// contains no duplicates.  Useful for testing.
@@ -341,6 +342,143 @@ impl<'a, T, I> SetConversion<'a, T> for SetIter<'a, T, I>
 where
     T: 'a + Ord + Clone,
     I: Iterator<Item = &'a T>,
+{
+}
+
+// MAP ITERATION CODE
+
+pub trait MapConversion<'a, K, V>: Iterator<Item = &'a (K, V)>
+where
+    K: 'a + Ord + Clone,
+    V: 'a + Clone,
+{
+    /// Create a OrderedSet<T> from the items in the Iterator's output
+    fn to_map(&mut self) -> OrderedMap<K, V> {
+        let ordered_list: Vec<(K, V)> = self.cloned().collect();
+        OrderedMap::<K, V>::from(ordered_list)
+    }
+}
+
+// Map Iterator
+pub struct MapIter<'a, K, V, I>
+where
+    K: 'a + Ord,
+    V: 'a,
+    I: Iterator<Item = &'a (K, V)>,
+{
+    iter: I,
+}
+
+impl<'a, K, V, I> MapIter<'a, K, V, I>
+where
+    K: 'a + Ord,
+    V: 'a,
+    I: Iterator<Item = &'a (K, V)>,
+{
+    pub fn new(iter: I) -> Self {
+        Self { iter: iter }
+    }
+}
+
+impl<'a, K, V, I> Iterator for MapIter<'a, K, V, I>
+where
+    K: 'a + Ord,
+    V: 'a,
+    I: Iterator<Item = &'a (K, V)>,
+{
+    type Item = &'a (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+impl<'a, K, V, I> MapConversion<'a, K, V> for MapIter<'a, K, V, I>
+where
+    K: 'a + Ord + Clone,
+    V: 'a + Clone,
+    I: Iterator<Item = &'a (K, V)>,
+{
+}
+
+// Map Merge Iterator
+/// Ordered Iterator over the merged output of two disjoint map Iterators.
+pub struct MapMergeIter<'a, K, V, L, R>
+where
+    K: 'a + Ord,
+    V: 'a,
+    L: Iterator<Item = &'a (K, V)>,
+    R: Iterator<Item = &'a (K, V)>,
+{
+    l_item: Option<L::Item>,
+    r_item: Option<R::Item>,
+    l_iter: L,
+    r_iter: R,
+}
+
+impl<'a, K, V, L, R> MapMergeIter<'a, K, V, L, R>
+where
+    K: 'a + Ord,
+    V: 'a,
+    L: Iterator<Item = &'a (K, V)>,
+    R: Iterator<Item = &'a (K, V)>,
+{
+    pub fn new(mut l_iter: L, mut r_iter: R) -> Self {
+        Self {
+            l_item: l_iter.next(),
+            r_item: r_iter.next(),
+            l_iter: l_iter,
+            r_iter: r_iter,
+        }
+    }
+}
+
+impl<'a, K, V, L, R> Iterator for MapMergeIter<'a, K, V, L, R>
+where
+    K: 'a + Ord,
+    V: 'a,
+    L: Iterator<Item = &'a (K, V)>,
+    R: Iterator<Item = &'a (K, V)>,
+{
+    type Item = &'a (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(l_item) = self.l_item {
+                if let Some(r_item) = self.r_item {
+                    match l_item.0.cmp(&r_item.0) {
+                        Ordering::Less => {
+                            self.l_item = self.l_iter.next();
+                            return Some(l_item);
+                        }
+                        Ordering::Greater => {
+                            self.r_item = self.r_iter.next();
+                            return Some(r_item);
+                        }
+                        Ordering::Equal => {
+                            panic!("merged map Iterators are not disjoint");
+                        }
+                    }
+                } else {
+                    self.l_item = self.l_iter.next();
+                    return Some(l_item);
+                }
+            } else if let Some(r_item) = self.r_item {
+                self.r_item = self.r_iter.next();
+                return Some(r_item);
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+impl<'a, K, V, L, R> MapConversion<'a, K, V> for MapMergeIter<'a, K, V, L, R>
+where
+    K: 'a + Ord + Clone,
+    V: 'a + Clone,
+    L: Iterator<Item = &'a (K, V)>,
+    R: Iterator<Item = &'a (K, V)>,
 {
 }
 
