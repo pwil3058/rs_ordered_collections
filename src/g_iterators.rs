@@ -14,6 +14,8 @@
 
 use std::cmp::Ordering;
 
+use crate::OrderedSet;
+
 struct VVIntersection<'a, T: Ord> {
     l_vec: &'a Vec<T>,
     r_vec: &'a Vec<T>,
@@ -32,7 +34,6 @@ impl<'a, T: Ord> VVIntersection<'a, T> {
     }
 }
 
-
 impl<'a, T: Ord> Iterator for VVIntersection<'a, T> {
     type Item = &'a T;
 
@@ -42,18 +43,18 @@ impl<'a, T: Ord> Iterator for VVIntersection<'a, T> {
                 if let Some(r_item) = self.r_vec.get(self.r_index) {
                     match l_item.cmp(&r_item) {
                         Ordering::Less => {
-                            self.l_index +=
-                                match self.l_vec[self.l_index..].binary_search(&r_item) {
-                                    Ok(index) => index,
-                                    Err(index) => index,
-                                };
+                            self.l_index += match self.l_vec[self.l_index..].binary_search(&r_item)
+                            {
+                                Ok(index) => index,
+                                Err(index) => index,
+                            };
                         }
                         Ordering::Greater => {
-                            self.r_index +=
-                                match self.r_vec[self.r_index..].binary_search(&l_item) {
-                                    Ok(index) => index,
-                                    Err(index) => index,
-                                };
+                            self.r_index += match self.r_vec[self.r_index..].binary_search(&l_item)
+                            {
+                                Ok(index) => index,
+                                Err(index) => index,
+                            };
                         }
                         Ordering::Equal => {
                             self.l_index += 1;
@@ -70,7 +71,6 @@ impl<'a, T: Ord> Iterator for VVIntersection<'a, T> {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

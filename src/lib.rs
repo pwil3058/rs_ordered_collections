@@ -26,6 +26,17 @@ pub mod iterators;
 pub mod ordered_map;
 pub mod ordered_set;
 
+/// An set of items of type T ordered according to Ord (with no duplicates)
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct OrderedSet<T: Ord> {
+    ordered_list: Vec<T>,
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct OrderedMap<K: Ord, V> {
+    ordered_list: Vec<(K, V)>,
+}
+
 pub fn are_disjoint<'a, T, L, R>(l_iter: &mut L, r_iter: &mut R) -> bool
 where
     T: 'a + Ord,

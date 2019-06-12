@@ -26,18 +26,17 @@ use std::slice::Iter;
 use std::vec::Drain;
 
 pub use crate::iterators::*;
-pub use crate::ordered_map::{Keys, OrderedMap};
+pub use crate::ordered_map::Keys;
 use crate::{a_contains_b, are_disjoint};
+use crate::OrderedMap;
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct OrderedSet<T: Ord> {
-    ordered_list: Vec<T>,
-}
+use crate::OrderedSet;
 
 impl<T: Ord> OrderedSet<T> {
     pub fn new() -> Self {
         Self::default()
     }
+
     /// Return the number of items in this set.
     pub fn len(&self) -> usize {
         self.ordered_list.len()

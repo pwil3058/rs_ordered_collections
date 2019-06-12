@@ -19,10 +19,7 @@ use std::vec::Drain;
 
 use crate::iterators::{IterSetOperations, MapIter, MapMergeIter, SetConversion};
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct OrderedMap<K: Ord, V> {
-    ordered_list: Vec<(K, V)>,
-}
+use crate::OrderedMap;
 
 impl<K: Ord, V> Default for OrderedMap<K, V> {
     fn default() -> Self {
