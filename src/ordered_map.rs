@@ -17,7 +17,7 @@ use std::default::Default;
 use std::slice::{Iter, IterMut};
 use std::vec::Drain;
 
-use crate::iterators::{MapIter, MapMergeIter, SetConversion, IterSetOperations};
+use crate::iterators::{IterSetOperations, MapIter, MapMergeIter, SetConversion};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct OrderedMap<K: Ord, V> {
@@ -178,11 +178,7 @@ impl<'a, K: Ord, V> Iterator for Keys<'a, K, V> {
     }
 }
 
-impl<'a, K, V> IterSetOperations<'a, K> for Keys<'a, K, V>
-where
-    K: 'a + Ord,
-{
-}
+impl<'a, K, V> IterSetOperations<'a, K> for Keys<'a, K, V> where K: 'a + Ord {}
 
 impl<'a, K, V> SetConversion<'a, K> for Keys<'a, K, V> where K: 'a + Ord + Clone {}
 

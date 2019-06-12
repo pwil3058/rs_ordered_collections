@@ -281,7 +281,10 @@ where
         Difference::new(self, iter)
     }
 
-    fn osi_symmetric_difference<I: Iterator<Item = &'a T>>(self, iter: I) -> SymmetricDifference<'a, T, Self, I> {
+    fn osi_symmetric_difference<I: Iterator<Item = &'a T>>(
+        self,
+        iter: I,
+    ) -> SymmetricDifference<'a, T, Self, I> {
         SymmetricDifference::new(self, iter)
     }
 }
