@@ -296,8 +296,9 @@ where
 {
     /// Create a OrderedSet<T> from the items in the Iterator's output
     fn to_set(&mut self) -> OrderedSet<T> {
-        let ordered_list: Vec<T> = self.cloned().collect();
-        OrderedSet::<T>::from(ordered_list)
+        OrderedSet::<T> {
+            ordered_list: self.cloned().collect(),
+        }
     }
 }
 

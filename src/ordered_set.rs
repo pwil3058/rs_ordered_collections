@@ -27,8 +27,8 @@ use std::vec::Drain;
 
 pub use crate::iterators::*;
 pub use crate::ordered_map::Keys;
-use crate::{a_contains_b, are_disjoint};
 use crate::OrderedMap;
+use crate::{a_contains_b, are_disjoint};
 
 use crate::OrderedSet;
 
