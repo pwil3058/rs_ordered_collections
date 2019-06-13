@@ -16,37 +16,47 @@ use std::cmp::Ordering;
 
 use crate::OrderedSet;
 
-struct SSIntersection<'a, T: Ord> {
-    l_set: &'a OrderedSet<T>,
-    r_set: &'a OrderedSet<T>,
-    l_index: usize,
-    r_index: usize,
+
+macro_rules! define_set_operation {
+    ( $iter_name:ident, $doc:meta ) => {
+        #[$doc]
+        pub struct $iter_name<'a, T: Ord> {
+            l_set: &'a OrderedSet<T>,
+            r_set: &'a OrderedSet<T>,
+            l_index: usize,
+            r_index: usize,
+        }
+
+        impl<'a, T: Ord> $iter_name<'a, T> {
+            pub fn new(l_set: &'a OrderedSet<T>, r_set: &'a OrderedSet<T>) -> Self {
+                Self {
+                    l_set: l_set,
+                    r_set: r_set,
+                    l_index: 0,
+                    r_index: 0,
+                }
+            }
+
+            fn l_offset_to(&self, t: &T) -> usize {
+                match self.l_set.ordered_list[self.l_index..].binary_search(t) {
+                    Ok(index) => index,
+                    Err(index) => index,
+                }
+            }
+
+            fn r_offset_to(&self, t: &T) -> usize {
+                match self.r_set.ordered_list[self.r_index..].binary_search(t) {
+                    Ok(index) => index,
+                    Err(index) => index,
+                }
+            }
+        }
+    }
 }
 
-impl<'a, T: Ord> SSIntersection<'a, T> {
-    pub fn new(l_set: &'a OrderedSet<T>, r_set: &'a OrderedSet<T>) -> Self {
-        Self {
-            l_set: l_set,
-            r_set: r_set,
-            l_index: 0,
-            r_index: 0,
-        }
-    }
-
-    fn l_offset_to(&self, t: &T) -> usize {
-        match self.l_set.ordered_list[self.l_index..].binary_search(t) {
-            Ok(index) => index,
-            Err(index) => index,
-        }
-    }
-
-    fn r_offset_to(&self, t: &T) -> usize {
-        match self.r_set.ordered_list[self.r_index..].binary_search(t) {
-            Ok(index) => index,
-            Err(index) => index,
-        }
-    }
-}
+define_set_operation!(SSIntersection,
+doc="An Iterator over the set intersection of two sets ordered according to Ord"
+);
 
 impl<'a, T: Ord> Iterator for SSIntersection<'a, T> {
     type Item = &'a T;
