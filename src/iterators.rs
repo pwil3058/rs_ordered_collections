@@ -43,6 +43,7 @@ where
 
 macro_rules! define_set_operation {
     ( $doc:meta, $iter:ident ) => {
+        #[$doc]
         pub struct $iter<'a, T, L, R>
         where
             T: 'a + Ord,
