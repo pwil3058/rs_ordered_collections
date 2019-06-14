@@ -22,6 +22,7 @@ use std::cmp::Ordering;
 use std::iter::Iterator;
 
 pub mod iterators;
+pub mod ordered_iterators;
 pub mod ordered_map;
 pub mod ordered_set;
 pub mod set_iterators;
