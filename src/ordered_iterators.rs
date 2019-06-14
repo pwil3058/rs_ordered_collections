@@ -17,7 +17,7 @@
 /// iterators. NB the default implementations do not provide any performance
 /// enhancement and are only provided so that algorithms that use these
 /// functions will still work.
-pub trait OrderedIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
+pub trait SkipAheadIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
     /// Return the next item in the iterator whose value is greater than
     /// to the given value.
     fn next_after(&mut self, target: &T) -> Option<Self::Item> {
@@ -108,7 +108,7 @@ impl<'a, T: Ord> Iterator for SetIter<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIter<'a, T> {
+impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIter<'a, T> {
     fn next_after(&mut self, t: &T) -> Option<&'a T> {
         self.index += after_index!(self.ordered_list[self.index..], t);
         if let Some(item) = self.ordered_list.get(self.index) {
@@ -152,7 +152,7 @@ impl<'a, T: Ord> Iterator for SetIterAfter<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterAfter<'a, T> {
+impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIterAfter<'a, T> {
     fn next_after(&mut self, t: &T) -> Option<Self::Item> {
         self.set_iter.next_after(t)
     }
@@ -184,7 +184,7 @@ impl<'a, T: Ord> Iterator for SetIterBefore<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterBefore<'a, T> {
+impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIterBefore<'a, T> {
     fn next_after(&mut self, t: &T) -> Option<&'a T> {
         self.set_iter.next_after(t)
     }
@@ -216,7 +216,7 @@ impl<'a, T: Ord> Iterator for SetIterFrom<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterFrom<'a, T> {
+impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIterFrom<'a, T> {
     fn next_after(&mut self, t: &T) -> Option<&'a T> {
         self.set_iter.next_after(t)
     }
@@ -248,7 +248,7 @@ impl<'a, T: Ord> Iterator for SetIterUntil<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterUntil<'a, T> {
+impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIterUntil<'a, T> {
     fn next_after(&mut self, t: &T) -> Option<Self::Item> {
         self.set_iter.next_after(t)
     }
@@ -393,7 +393,7 @@ mod tests {
     use super::*;
     use std::slice::Iter;
 
-    impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for Iter<'a, T> {}
+    impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for Iter<'a, T> {}
 
     static LIST: &[&str] = &["a", "c", "e", "g", "i", "k", "m"];
     static MAP: &[(&str, i32)] = &[
