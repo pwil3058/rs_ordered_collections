@@ -33,8 +33,8 @@ macro_rules! define_set_operation {
     ( $iter_name:ident, $doc:meta ) => {
         #[$doc]
         pub struct $iter_name<'a, T: Ord> {
-            l_set: &'a OrderedSet<T>,
-            r_set: &'a OrderedSet<T>,
+            l_vec: &'a Vec<T>,
+            r_vec: &'a Vec<T>,
             l_index: usize,
             r_index: usize,
         }
@@ -42,22 +42,24 @@ macro_rules! define_set_operation {
         impl<'a, T: Ord> $iter_name<'a, T> {
             pub fn new(l_set: &'a OrderedSet<T>, r_set: &'a OrderedSet<T>) -> Self {
                 Self {
-                    l_set: l_set,
-                    r_set: r_set,
+                    l_vec: &l_set.ordered_list,
+                    r_vec: &r_set.ordered_list,
                     l_index: 0,
                     r_index: 0,
                 }
             }
 
+            #[inline]
             fn l_offset_to(&self, t: &T) -> usize {
-                match self.l_set.ordered_list[self.l_index..].binary_search(t) {
+                match self.l_vec[self.l_index..].binary_search(t) {
                     Ok(index) => index,
                     Err(index) => index,
                 }
             }
 
+            #[inline]
             fn r_offset_to(&self, t: &T) -> usize {
-                match self.r_set.ordered_list[self.r_index..].binary_search(t) {
+                match self.r_vec[self.r_index..].binary_search(t) {
                     Ok(index) => index,
                     Err(index) => index,
                 }
@@ -78,8 +80,8 @@ impl<'a, T: Ord> Iterator for SSIntersection<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_set.ordered_list.get(self.l_index) {
-                if let Some(r_item) = self.r_set.ordered_list.get(self.r_index) {
+            if let Some(l_item) = self.l_vec.get(self.l_index) {
+                if let Some(r_item) = self.r_vec.get(self.r_index) {
                     match l_item.cmp(&r_item) {
                         Ordering::Less => {
                             self.l_index += self.l_offset_to(r_item);
@@ -113,8 +115,8 @@ impl<'a, T: Ord> Iterator for SSUnion<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_set.ordered_list.get(self.l_index) {
-                if let Some(r_item) = self.r_set.ordered_list.get(self.r_index) {
+            if let Some(l_item) = self.l_vec.get(self.l_index) {
+                if let Some(r_item) = self.r_vec.get(self.r_index) {
                     match l_item.cmp(&r_item) {
                         Ordering::Less => {
                             self.l_index += 1;
@@ -134,7 +136,7 @@ impl<'a, T: Ord> Iterator for SSUnion<'a, T> {
                     self.l_index += 1;
                     return Some(l_item);
                 }
-            } else if let Some(r_item) = self.r_set.ordered_list.get(self.r_index) {
+            } else if let Some(r_item) = self.r_vec.get(self.r_index) {
                 self.r_index += 1;
                 return Some(r_item);
             } else {
@@ -155,8 +157,8 @@ impl<'a, T: Ord> Iterator for SSDifference<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_set.ordered_list.get(self.l_index) {
-                if let Some(r_item) = self.r_set.ordered_list.get(self.r_index) {
+            if let Some(l_item) = self.l_vec.get(self.l_index) {
+                if let Some(r_item) = self.r_vec.get(self.r_index) {
                     match l_item.cmp(&r_item) {
                         Ordering::Less => {
                             self.l_index += 1;
@@ -192,8 +194,8 @@ impl<'a, T: Ord> Iterator for SSSymmetricDifference<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_set.ordered_list.get(self.l_index) {
-                if let Some(r_item) = self.r_set.ordered_list.get(self.r_index) {
+            if let Some(l_item) = self.l_vec.get(self.l_index) {
+                if let Some(r_item) = self.r_vec.get(self.r_index) {
                     match l_item.cmp(&r_item) {
                         Ordering::Less => {
                             self.l_index += 1;
@@ -212,7 +214,7 @@ impl<'a, T: Ord> Iterator for SSSymmetricDifference<'a, T> {
                     self.l_index += 1;
                     return Some(l_item);
                 }
-            } else if let Some(r_item) = self.r_set.ordered_list.get(self.r_index) {
+            } else if let Some(r_item) = self.r_vec.get(self.r_index) {
                 self.r_index += 1;
                 return Some(r_item);
             } else {
@@ -226,31 +228,33 @@ macro_rules! define_set_map_operation {
     ( $iter_name:ident, $doc:meta ) => {
         #[$doc]
         pub struct $iter_name<'a, T: Ord, V> {
-            l_set: &'a OrderedSet<T>,
-            r_map: &'a OrderedMap<T, V>,
+            l_vec: &'a Vec<T>,
+            r_vec: &'a Vec<(T, V)>,
             l_index: usize,
             r_index: usize,
         }
 
         impl<'a, T: Ord, V> $iter_name<'a, T, V> {
-            pub fn new(l_set: &'a OrderedSet<T>, r_map: &'a OrderedMap<T, V>) -> Self {
+            pub fn new(set: &'a OrderedSet<T>, map: &'a OrderedMap<T, V>) -> Self {
                 Self {
-                    l_set: l_set,
-                    r_map: r_map,
+                    l_vec: &set.ordered_list,
+                    r_vec: &map.ordered_list,
                     l_index: 0,
                     r_index: 0,
                 }
             }
 
+            #[inline]
             fn l_offset_to(&self, t: &T) -> usize {
-                match self.l_set.ordered_list[self.l_index..].binary_search(t) {
+                match self.l_vec[self.l_index..].binary_search(t) {
                     Ok(index) => index,
                     Err(index) => index,
                 }
             }
 
+            #[inline]
             fn r_offset_to(&self, t: &T) -> usize {
-                match self.r_map.ordered_list[self.r_index..].binary_search_by(|x| x.0.cmp(t)) {
+                match self.r_vec[self.r_index..].binary_search_by(|x| x.0.cmp(t)) {
                     Ok(index) => index,
                     Err(index) => index,
                 }
@@ -272,8 +276,8 @@ impl<'a, T: Ord, V> Iterator for SMIntersection<'a, T, V> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_set.ordered_list.get(self.l_index) {
-                if let Some(r_item) = self.r_map.ordered_list.get(self.r_index) {
+            if let Some(l_item) = self.l_vec.get(self.l_index) {
+                if let Some(r_item) = self.r_vec.get(self.r_index) {
                     match l_item.cmp(&r_item.0) {
                         Ordering::Less => {
                             self.l_index += self.l_offset_to(&r_item.0);
@@ -308,8 +312,8 @@ impl<'a, T: Ord, V> Iterator for SMUnion<'a, T, V> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_set.ordered_list.get(self.l_index) {
-                if let Some(r_item) = self.r_map.ordered_list.get(self.r_index) {
+            if let Some(l_item) = self.l_vec.get(self.l_index) {
+                if let Some(r_item) = self.r_vec.get(self.r_index) {
                     match l_item.cmp(&r_item.0) {
                         Ordering::Less => {
                             self.l_index += 1;
@@ -329,7 +333,7 @@ impl<'a, T: Ord, V> Iterator for SMUnion<'a, T, V> {
                     self.l_index += 1;
                     return Some(l_item);
                 }
-            } else if let Some(r_item) = self.r_map.ordered_list.get(self.r_index) {
+            } else if let Some(r_item) = self.r_vec.get(self.r_index) {
                 self.r_index += 1;
                 return Some(&r_item.0);
             } else {
@@ -350,8 +354,8 @@ impl<'a, T: Ord, V> Iterator for SMDifference<'a, T, V> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_set.ordered_list.get(self.l_index) {
-                if let Some(r_item) = self.r_map.ordered_list.get(self.r_index) {
+            if let Some(l_item) = self.l_vec.get(self.l_index) {
+                if let Some(r_item) = self.r_vec.get(self.r_index) {
                     match l_item.cmp(&r_item.0) {
                         Ordering::Less => {
                             self.l_index += 1;
@@ -387,8 +391,8 @@ impl<'a, T: Ord, V> Iterator for SMSymmetricDifference<'a, T, V> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_set.ordered_list.get(self.l_index) {
-                if let Some(r_item) = self.r_map.ordered_list.get(self.r_index) {
+            if let Some(l_item) = self.l_vec.get(self.l_index) {
+                if let Some(r_item) = self.r_vec.get(self.r_index) {
                     match l_item.cmp(&r_item.0) {
                         Ordering::Less => {
                             self.l_index += 1;
@@ -407,7 +411,7 @@ impl<'a, T: Ord, V> Iterator for SMSymmetricDifference<'a, T, V> {
                     self.l_index += 1;
                     return Some(l_item);
                 }
-            } else if let Some(r_item) = self.r_map.ordered_list.get(self.r_index) {
+            } else if let Some(r_item) = self.r_vec.get(self.r_index) {
                 self.r_index += 1;
                 return Some(&r_item.0);
             } else {
