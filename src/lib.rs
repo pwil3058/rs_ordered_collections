@@ -25,7 +25,7 @@ pub mod iterators;
 pub mod ordered_iterators;
 pub mod ordered_map;
 pub mod ordered_set;
-pub mod set_iterators;
+//pub mod set_iterators;
 
 /// An set of items of type T ordered according to Ord (with no duplicates)
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]

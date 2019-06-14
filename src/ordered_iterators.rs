@@ -12,43 +12,208 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub trait OrderedIterator<'a, T: 'a + Ord> : Iterator<Item=&'a T> {
+/// Iterator enhancements for ordered colletions without duplicates
+pub trait OrderedIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
+    /// Return the next item in the iterator whose value is greater than the given value
     fn next_after(&mut self, target: &T) -> Option<&'a T> {
         while let Some(value) = self.next() {
             if value > target {
-                return Some(value)
+                return Some(value);
             }
         }
         None
     }
 
+    /// Return the next item in the iterator whose value is less than the given value
     fn next_before(&mut self, target: &T) -> Option<&'a T> {
         while let Some(value) = self.next() {
             if value < target {
-                return Some(value)
+                return Some(value);
             }
         }
         None
     }
 
+    /// Return the next item in the iterator whose value is greater than or equal to the given value
     fn next_from(&mut self, target: &T) -> Option<&'a T> {
         while let Some(value) = self.next() {
             if value >= target {
-                return Some(value)
+                return Some(value);
             }
         }
         None
     }
 
+    /// Return the next item in the iterator whose value is less than or equal to the given value
     fn next_until(&mut self, target: &T) -> Option<&'a T> {
         while let Some(value) = self.next() {
             if value <= target {
-                return Some(value)
+                return Some(value);
             }
         }
         None
     }
 }
+
+// SET ITERATOR
+
+/// An Iterator over the items in an ordered list
+pub struct SetIter<'a, T: Ord> {
+    ordered_list: &'a Vec<T>,
+    index: usize,
+}
+
+impl<'a, T: Ord> SetIter<'a, T> {
+    pub fn new(ordered_list: &'a Vec<T>) -> Self {
+        Self {
+            ordered_list,
+            index: 0,
+        }
+    }
+}
+
+impl<'a, T: Ord> Iterator for SetIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIter<'a, T> {
+    fn next_from(&mut self, t: &T) -> Option<&'a T> {
+        self.index += match self.ordered_list[self.index..].binary_search(t) {
+            Ok(index) => index,
+            Err(index) => index,
+        };
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+
+    fn next_after(&mut self, t: &T) -> Option<&'a T> {
+        self.index += match self.ordered_list[self.index..].binary_search(t) {
+            Ok(index) => index + 1,
+            Err(index) => index,
+        };
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+}
+
+/// An Iterator over the items in an ordered list after a given value
+pub struct SetIterAfter<'a, T: 'a + Ord> {
+    set_iter: SetIter<'a, T>,
+}
+
+impl<'a, T: 'a + Ord> SetIterAfter<'a, T> {
+    pub fn new(ordered_list: &'a Vec<T>, t: &T) -> Self {
+        let mut set_iter = SetIter::new(ordered_list);
+        set_iter.index += match set_iter.ordered_list.binary_search(t) {
+            Ok(index) => index + 1,
+            Err(index) => index,
+        };
+        Self { set_iter }
+    }
+}
+
+impl<'a, T: Ord> Iterator for SetIterAfter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.set_iter.next()
+    }
+}
+
+impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterAfter<'a, T> {}
+
+/// An Iterator over the items in an ordered list before a given value
+pub struct SetIterBefore<'a, T: 'a + Ord> {
+    set_iter: SetIter<'a, T>,
+    limit: &'a T,
+}
+
+impl<'a, T: 'a + Ord> SetIterBefore<'a, T> {
+    pub fn new(ordered_list: &'a Vec<T>, t: &'a T) -> Self {
+        Self {
+            set_iter: SetIter::new(ordered_list),
+            limit: t,
+        }
+    }
+}
+
+impl<'a, T: Ord> Iterator for SetIterBefore<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.set_iter.next_before(self.limit)
+    }
+}
+
+impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterBefore<'a, T> {}
+
+/// An Iterator over the items in an ordered list from a given value
+pub struct SetIterFrom<'a, T: 'a + Ord> {
+    set_iter: SetIter<'a, T>,
+}
+
+impl<'a, T: 'a + Ord> SetIterFrom<'a, T> {
+    pub fn new(ordered_list: &'a Vec<T>, t: &T) -> Self {
+        let mut set_iter = SetIter::new(ordered_list);
+        set_iter.index += match set_iter.ordered_list.binary_search(t) {
+            Ok(index) => index,
+            Err(index) => index,
+        };
+        Self { set_iter }
+    }
+}
+
+impl<'a, T: Ord> Iterator for SetIterFrom<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.set_iter.next()
+    }
+}
+
+impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterFrom<'a, T> {}
+
+/// An Iterator over the items in an ordered list until a given value
+pub struct SetIterUntil<'a, T: 'a + Ord> {
+    set_iter: SetIter<'a, T>,
+    limit: &'a T,
+}
+
+impl<'a, T: 'a + Ord> SetIterUntil<'a, T> {
+    pub fn new(ordered_list: &'a Vec<T>, t: &'a T) -> Self {
+        Self {
+            set_iter: SetIter::new(ordered_list),
+            limit: t,
+        }
+    }
+}
+
+impl<'a, T: Ord> Iterator for SetIterUntil<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.set_iter.next_until(self.limit)
+    }
+}
+
+impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterUntil<'a, T> {}
 
 #[cfg(test)]
 mod tests {
@@ -93,5 +258,65 @@ mod tests {
         let mut iter = LIST.iter();
         assert_eq!(iter.next_after(&"k"), Some(&"m"));
         assert_eq!(iter.next_after(&"k"), None);
+    }
+
+    #[test]
+    fn set_iter_works() {
+        let vec = LIST.to_vec();
+        let set_iter = SetIter::new(&vec);
+        let result: Vec<&str> = set_iter.cloned().collect();
+        assert_eq!(result, vec);
+        let mut set_iter = SetIter::new(&vec);
+        assert_eq!(set_iter.next_after(&"g"), Some(&"i"));
+        let result: Vec<&str> = set_iter.cloned().collect();
+        assert_eq!(result, vec[5..].to_vec());
+        let mut set_iter = SetIter::new(&vec);
+        assert_eq!(set_iter.next_from(&"g"), Some(&"g"));
+        let result: Vec<&str> = set_iter.cloned().collect();
+        assert_eq!(result, vec[4..].to_vec());
+    }
+
+    #[test]
+    fn iter_after_works() {
+        let vec = LIST.to_vec();
+        let iter_after = SetIterAfter::new(&vec, &"g");
+        let result: Vec<&str> = iter_after.cloned().collect();
+        assert_eq!(result, vec[4..].to_vec());
+        let iter_after = SetIterAfter::new(&vec, &"f");
+        let result: Vec<&str> = iter_after.cloned().collect();
+        assert_eq!(result, vec[3..].to_vec());
+    }
+
+    #[test]
+    fn iter_before_works() {
+        let vec = LIST.to_vec();
+        let iter_before = SetIterBefore::new(&vec, &"g");
+        let result: Vec<&str> = iter_before.cloned().collect();
+        assert_eq!(result, vec[..3].to_vec());
+        let iter_before = SetIterBefore::new(&vec, &"f");
+        let result: Vec<&str> = iter_before.cloned().collect();
+        assert_eq!(result, vec[..3].to_vec());
+    }
+
+    #[test]
+    fn iter_from_works() {
+        let vec = LIST.to_vec();
+        let iter_from = SetIterFrom::new(&vec, &"g");
+        let result: Vec<&str> = iter_from.cloned().collect();
+        assert_eq!(result, vec[3..].to_vec());
+        let iter_from = SetIterFrom::new(&vec, &"f");
+        let result: Vec<&str> = iter_from.cloned().collect();
+        assert_eq!(result, vec[3..].to_vec());
+    }
+
+    #[test]
+    fn iter_until_works() {
+        let vec = LIST.to_vec();
+        let iter_until = SetIterUntil::new(&vec, &"g");
+        let result: Vec<&str> = iter_until.cloned().collect();
+        assert_eq!(result, vec[..4].to_vec());
+        let iter_until = SetIterUntil::new(&vec, &"f");
+        let result: Vec<&str> = iter_until.cloned().collect();
+        assert_eq!(result, vec[..3].to_vec());
     }
 }
