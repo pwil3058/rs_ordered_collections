@@ -82,12 +82,12 @@ macro_rules! tuple_from_index {
 
 /// An Iterator over the items in an ordered list
 pub struct SetIter<'a, T: Ord> {
-    ordered_list: &'a [T],
+    ordered_list: &'a[T],
     index: usize,
 }
 
 impl<'a, T: Ord> SetIter<'a, T> {
-    pub fn new(ordered_list: &'a [T]) -> Self {
+    pub fn new(ordered_list: &'a[T]) -> Self {
         Self {
             ordered_list,
             index: 0,
@@ -136,7 +136,7 @@ pub struct SetIterAfter<'a, T: 'a + Ord> {
 }
 
 impl<'a, T: 'a + Ord> SetIterAfter<'a, T> {
-    pub fn new(ordered_list: &'a Vec<T>, t: &T) -> Self {
+    pub fn new(ordered_list: &'a[T], t: &T) -> Self {
         let start = after_index!(ordered_list, t);
         Self {
             set_iter: SetIter::new(&ordered_list[start..]),
@@ -168,7 +168,7 @@ pub struct SetIterBefore<'a, T: 'a + Ord> {
 }
 
 impl<'a, T: 'a + Ord> SetIterBefore<'a, T> {
-    pub fn new(ordered_list: &'a Vec<T>, t: &'a T) -> Self {
+    pub fn new(ordered_list: &'a[T], t: &'a T) -> Self {
         let end = from_index!(ordered_list, t);
         Self {
             set_iter: SetIter::new(&ordered_list[..end]),
@@ -200,7 +200,7 @@ pub struct SetIterFrom<'a, T: 'a + Ord> {
 }
 
 impl<'a, T: 'a + Ord> SetIterFrom<'a, T> {
-    pub fn new(ordered_list: &'a Vec<T>, t: &T) -> Self {
+    pub fn new(ordered_list: &'a[T], t: &T) -> Self {
         let start = from_index!(ordered_list, t);
         Self {
             set_iter: SetIter::new(&ordered_list[start..]),
@@ -232,7 +232,7 @@ pub struct SetIterUntil<'a, T: 'a + Ord> {
 }
 
 impl<'a, T: 'a + Ord> SetIterUntil<'a, T> {
-    pub fn new(ordered_list: &'a Vec<T>, t: &'a T) -> Self {
+    pub fn new(ordered_list: &'a[T], t: &'a T) -> Self {
         let end = after_index!(ordered_list, t);
         Self {
             set_iter: SetIter::new(&ordered_list[..end]),
@@ -259,6 +259,36 @@ impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIterUntil<'a, T> {
 }
 
 // MAP ITERATOR
+
+/// Iterator enhancement to provide a skip ahead feature. This mechanism
+/// is used to optimise implementation of set operation (difference, intersection, etc)
+/// iterators. NB the default implementations do not provide any performance
+/// enhancement and are only provided so that algorithms that use these
+/// functions will still work.
+pub trait SkipAheadMapIterator<'a, K: 'a + Ord, V: 'a>: Iterator<Item = &'a (K, V)> {
+    /// Return the next item in the iterator whose value is greater than
+    /// to the given value.
+    fn next_after(&mut self, target: &K) -> Option<Self::Item> {
+        while let Some(item) = self.next() {
+            if &item.0 > target {
+                return Some(item);
+            }
+        }
+        None
+    }
+
+    /// Return the next item in the iterator whose value is greater than
+    /// or equal to the given value.  Used to optimise set operation
+    /// iterators.
+    fn next_from(&mut self, target: &K) -> Option<Self::Item> {
+        while let Some(item) = self.next() {
+            if &item.0 >= target {
+                return Some(item);
+            }
+        }
+        None
+    }
+}
 
 /// An Iterator over the items in an ordered map
 pub struct MapIter<'a, K: Ord, V> {
@@ -288,7 +318,17 @@ impl<'a, K: Ord, V> Iterator for MapIter<'a, K, V> {
     }
 }
 
-impl<'a, K: 'a + Ord, V> MapIter<'a, K, V> {
+impl<'a, K: 'a + Ord, V> SkipAheadMapIterator<'a, K, V> for MapIter<'a, K, V> {
+    fn next_after(&mut self, k: &K) -> Option<&'a (K, V)> {
+        self.index += tuple_after_index!(self.ordered_list[self.index..], k);
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+
     fn next_from(&mut self, k: &K) -> Option<&'a (K, V)> {
         self.index += tuple_from_index!(self.ordered_list[self.index..], k);
         if let Some(item) = self.ordered_list.get(self.index) {
@@ -306,7 +346,7 @@ pub struct MapIterAfter<'a, K: 'a + Ord, V> {
 }
 
 impl<'a, K: 'a + Ord, V> MapIterAfter<'a, K, V> {
-    pub fn new(ordered_list: &'a Vec<(K, V)>, k: &K) -> Self {
+    pub fn new(ordered_list: &'a [(K, V)], k: &K) -> Self {
         let start = tuple_after_index!(ordered_list, k);
         Self {
             map_iter: MapIter::new(&ordered_list[start..]),
@@ -328,7 +368,7 @@ pub struct MapIterBefore<'a, K: 'a + Ord, V> {
 }
 
 impl<'a, K: 'a + Ord, V> MapIterBefore<'a, K, V> {
-    pub fn new(ordered_list: &'a Vec<(K, V)>, k: &'a K) -> Self {
+    pub fn new(ordered_list: &'a [(K, V)], k: &'a K) -> Self {
         let end = tuple_from_index!(ordered_list, k);
         Self {
             map_iter: MapIter::new(&ordered_list[..end]),
@@ -350,7 +390,7 @@ pub struct MapIterFrom<'a, K: 'a + Ord, V> {
 }
 
 impl<'a, K: 'a + Ord, V> MapIterFrom<'a, K, V> {
-    pub fn new(ordered_list: &'a Vec<(K, V)>, k: &K) -> Self {
+    pub fn new(ordered_list: &'a [(K, V)], k: &K) -> Self {
         let start = tuple_from_index!(ordered_list, k);
         Self {
             map_iter: MapIter::new(&ordered_list[start..]),
@@ -372,7 +412,7 @@ pub struct MapIterUntil<'a, K: 'a + Ord, V> {
 }
 
 impl<'a, K: 'a + Ord, V> MapIterUntil<'a, K, V> {
-    pub fn new(ordered_list: &'a Vec<(K, V)>, k: &'a K) -> Self {
+    pub fn new(ordered_list: &'a [(K, V)], k: &'a K) -> Self {
         let end = tuple_after_index!(ordered_list, k);
         Self {
             map_iter: MapIter::new(&ordered_list[..end]),
@@ -401,13 +441,13 @@ mod tests {
         ("c", 5),
         ("e", 4),
         ("g", 3),
-        ("i", 4),
-        ("k", 5),
-        ("m", 6),
+        ("i", 2),
+        ("k", 1),
+        ("m", 0),
     ];
 
     #[test]
-    fn next_from_works() {
+    fn defaul_next_from_works() {
         assert_eq!(LIST.iter().next_from(&"g"), Some(&"g"));
         assert_eq!(LIST.iter().next_from(&"a"), Some(&"a"));
         let mut iter = LIST.iter();
@@ -416,7 +456,7 @@ mod tests {
     }
 
     #[test]
-    fn next_after_works() {
+    fn defaul_next_after_works() {
         assert_eq!(LIST.iter().next_after(&"g"), Some(&"i"));
         assert_eq!(LIST.iter().next_after(&"a"), Some(&"c"));
         let mut iter = LIST.iter();
@@ -425,28 +465,62 @@ mod tests {
     }
 
     #[test]
+    fn map_next_after_works() {
+        assert_eq!(MapIter::new(MAP).next_after(&"g"), Some(&("i", 2)));
+        assert_eq!(MapIter::new(MAP).next_after(&"a"), Some(&("c", 5)));
+        let mut iter = MapIter::new(MAP);
+        assert_eq!(iter.next_after(&"k"), Some(&("m", 0)));
+        assert_eq!(iter.next_after(&"k"), None);
+    }
+
+    #[test]
+    fn map_next_from_works() {
+        assert_eq!(MapIter::new(MAP).next_from(&"g"), Some(&("g", 3)));
+        assert_eq!(MapIter::new(MAP).next_from(&"a"), Some(&("a", 6)));
+        let mut iter = MapIter::new(MAP);
+        assert_eq!(iter.next_from(&"m"), Some(&("m", 0)));
+        assert_eq!(iter.next_from(&"m"), None);
+    }
+
+    #[test]
     fn set_iter_works() {
         let vec = LIST.to_vec();
-        let set_iter = SetIter::new(&vec);
+        let set_iter = SetIter::new(LIST);
         let result: Vec<&str> = set_iter.cloned().collect();
         assert_eq!(result, vec);
-        let mut set_iter = SetIter::new(&vec);
+        let mut set_iter = SetIter::new(LIST);
         assert_eq!(set_iter.next_after(&"g"), Some(&"i"));
         let result: Vec<&str> = set_iter.cloned().collect();
         assert_eq!(result, vec[5..].to_vec());
-        let mut set_iter = SetIter::new(&vec);
+        let mut set_iter = SetIter::new(LIST);
         assert_eq!(set_iter.next_from(&"g"), Some(&"g"));
         let result: Vec<&str> = set_iter.cloned().collect();
         assert_eq!(result, vec[4..].to_vec());
     }
 
     #[test]
+    fn map_iter_works() {
+        let vec = MAP.to_vec();
+        let set_iter = MapIter::new(MAP);
+        let result: Vec<(&str, i32)> = set_iter.cloned().collect();
+        assert_eq!(result, vec);
+        let mut set_iter = MapIter::new(MAP);
+        assert_eq!(set_iter.next_after(&"g"), Some(&("i", 2)));
+        let result: Vec<(&str, i32)> = set_iter.cloned().collect();
+        assert_eq!(result, vec[5..].to_vec());
+        let mut set_iter = MapIter::new(MAP);
+        assert_eq!(set_iter.next_from(&"g"), Some(&("g", 3)));
+        let result: Vec<(&str, i32)> = set_iter.cloned().collect();
+        assert_eq!(result, vec[4..].to_vec());
+    }
+
+    #[test]
     fn iter_after_works() {
         let vec = LIST.to_vec();
-        let iter_after = SetIterAfter::new(&vec, &"g");
+        let iter_after = SetIterAfter::new(LIST, &"g");
         let result: Vec<&str> = iter_after.cloned().collect();
         assert_eq!(result, vec[4..].to_vec());
-        let iter_after = SetIterAfter::new(&vec, &"f");
+        let iter_after = SetIterAfter::new(LIST, &"f");
         let result: Vec<&str> = iter_after.cloned().collect();
         assert_eq!(result, vec[3..].to_vec());
     }
@@ -454,10 +528,10 @@ mod tests {
     #[test]
     fn iter_before_works() {
         let vec = LIST.to_vec();
-        let iter_before = SetIterBefore::new(&vec, &"g");
+        let iter_before = SetIterBefore::new(LIST, &"g");
         let result: Vec<&str> = iter_before.cloned().collect();
         assert_eq!(result, vec[..3].to_vec());
-        let iter_before = SetIterBefore::new(&vec, &"f");
+        let iter_before = SetIterBefore::new(LIST, &"f");
         let result: Vec<&str> = iter_before.cloned().collect();
         assert_eq!(result, vec[..3].to_vec());
     }
@@ -465,10 +539,10 @@ mod tests {
     #[test]
     fn iter_from_works() {
         let vec = LIST.to_vec();
-        let iter_from = SetIterFrom::new(&vec, &"g");
+        let iter_from = SetIterFrom::new(LIST, &"g");
         let result: Vec<&str> = iter_from.cloned().collect();
         assert_eq!(result, vec[3..].to_vec());
-        let iter_from = SetIterFrom::new(&vec, &"f");
+        let iter_from = SetIterFrom::new(LIST, &"f");
         let result: Vec<&str> = iter_from.cloned().collect();
         assert_eq!(result, vec[3..].to_vec());
     }
@@ -476,10 +550,10 @@ mod tests {
     #[test]
     fn iter_until_works() {
         let vec = LIST.to_vec();
-        let iter_until = SetIterUntil::new(&vec, &"g");
+        let iter_until = SetIterUntil::new(LIST, &"g");
         let result: Vec<&str> = iter_until.cloned().collect();
         assert_eq!(result, vec[..4].to_vec());
-        let iter_until = SetIterUntil::new(&vec, &"f");
+        let iter_until = SetIterUntil::new(LIST, &"f");
         let result: Vec<&str> = iter_until.cloned().collect();
         assert_eq!(result, vec[..3].to_vec());
     }
