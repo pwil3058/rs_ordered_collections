@@ -14,10 +14,32 @@
 
 /// Iterator enhancement to provide a skip ahead feature. This mechanism
 /// is used to optimise implementation of set operation (difference, intersection, etc)
-/// iterators.
-pub trait NextFrom<'a, T: 'a>: Iterator<Item = &'a T> {
-    /// Return the next item in the iterator whose value is greater than or equal to the given value
-    fn next_from(&mut self, target: &T) -> Option<Self::Item>;
+/// iterators. NB the default implementations do not provide any performance
+/// enhancement and are only provided so that algorithms that use these
+/// functions will still work.
+pub trait OrderedIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
+    /// Return the next item in the iterator whose value is greater than
+    /// to the given value.
+    fn next_after(&mut self, target: &T) -> Option<Self::Item> {
+        while let Some(item) = self.next() {
+            if item > target {
+                return Some(item);
+            }
+        }
+        None
+    }
+
+    /// Return the next item in the iterator whose value is greater than
+    /// or equal to the given value.  Used to optimise set operation
+    /// iterators.
+    fn next_from(&mut self, target: &T) -> Option<Self::Item> {
+        while let Some(item) = self.next() {
+            if item >= target {
+                return Some(item);
+            }
+        }
+        None
+    }
 }
 
 macro_rules! after_index {
@@ -29,7 +51,7 @@ macro_rules! after_index {
     };
 }
 
-macro_rules! before_index {
+macro_rules! from_index {
     ( $list:expr, $target:expr ) => {
         match $list.binary_search($target) {
             Ok(index) => index,
@@ -47,7 +69,7 @@ macro_rules! tuple_after_index {
     };
 }
 
-macro_rules! tuple_before_index {
+macro_rules! tuple_from_index {
     ( $list:expr, $target:expr ) => {
         match $list.binary_search_by(|x| x.0.cmp($target)) {
             Ok(index) => index,
@@ -86,9 +108,19 @@ impl<'a, T: Ord> Iterator for SetIter<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> NextFrom<'a, T> for SetIter<'a, T> {
+impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIter<'a, T> {
+    fn next_after(&mut self, t: &T) -> Option<&'a T> {
+        self.index += after_index!(self.ordered_list[self.index..], t);
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+
     fn next_from(&mut self, t: &T) -> Option<&'a T> {
-        self.index += before_index!(self.ordered_list[self.index..], t);
+        self.index += from_index!(self.ordered_list[self.index..], t);
         if let Some(item) = self.ordered_list.get(self.index) {
             self.index += 1;
             Some(item)
@@ -120,7 +152,11 @@ impl<'a, T: Ord> Iterator for SetIterAfter<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> NextFrom<'a, T> for SetIterAfter<'a, T> {
+impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterAfter<'a, T> {
+    fn next_after(&mut self, t: &T) -> Option<Self::Item> {
+        self.set_iter.next_after(t)
+    }
+
     fn next_from(&mut self, t: &T) -> Option<Self::Item> {
         self.set_iter.next_from(t)
     }
@@ -133,7 +169,7 @@ pub struct SetIterBefore<'a, T: 'a + Ord> {
 
 impl<'a, T: 'a + Ord> SetIterBefore<'a, T> {
     pub fn new(ordered_list: &'a Vec<T>, t: &'a T) -> Self {
-        let end = before_index!(ordered_list, t);
+        let end = from_index!(ordered_list, t);
         Self {
             set_iter: SetIter::new(&ordered_list[..end]),
         }
@@ -148,7 +184,11 @@ impl<'a, T: Ord> Iterator for SetIterBefore<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> NextFrom<'a, T> for SetIterBefore<'a, T> {
+impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterBefore<'a, T> {
+    fn next_after(&mut self, t: &T) -> Option<&'a T> {
+        self.set_iter.next_after(t)
+    }
+
     fn next_from(&mut self, t: &T) -> Option<&'a T> {
         self.set_iter.next_from(t)
     }
@@ -161,7 +201,7 @@ pub struct SetIterFrom<'a, T: 'a + Ord> {
 
 impl<'a, T: 'a + Ord> SetIterFrom<'a, T> {
     pub fn new(ordered_list: &'a Vec<T>, t: &T) -> Self {
-        let start = before_index!(ordered_list, t);
+        let start = from_index!(ordered_list, t);
         Self {
             set_iter: SetIter::new(&ordered_list[start..]),
         }
@@ -176,7 +216,11 @@ impl<'a, T: Ord> Iterator for SetIterFrom<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> NextFrom<'a, T> for SetIterFrom<'a, T> {
+impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterFrom<'a, T> {
+    fn next_after(&mut self, t: &T) -> Option<&'a T> {
+        self.set_iter.next_after(t)
+    }
+
     fn next_from(&mut self, t: &T) -> Option<&'a T> {
         self.set_iter.next_from(t)
     }
@@ -204,7 +248,11 @@ impl<'a, T: Ord> Iterator for SetIterUntil<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> NextFrom<'a, T> for SetIterUntil<'a, T> {
+impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterUntil<'a, T> {
+    fn next_after(&mut self, t: &T) -> Option<Self::Item> {
+        self.set_iter.next_after(t)
+    }
+
     fn next_from(&mut self, t: &T) -> Option<Self::Item> {
         self.set_iter.next_from(t)
     }
@@ -242,7 +290,7 @@ impl<'a, K: Ord, V> Iterator for MapIter<'a, K, V> {
 
 impl<'a, K: 'a + Ord, V> MapIter<'a, K, V> {
     fn next_from(&mut self, k: &K) -> Option<&'a (K, V)> {
-        self.index += tuple_before_index!(self.ordered_list[self.index..], k);
+        self.index += tuple_from_index!(self.ordered_list[self.index..], k);
         if let Some(item) = self.ordered_list.get(self.index) {
             self.index += 1;
             Some(item)
@@ -281,7 +329,7 @@ pub struct MapIterBefore<'a, K: 'a + Ord, V> {
 
 impl<'a, K: 'a + Ord, V> MapIterBefore<'a, K, V> {
     pub fn new(ordered_list: &'a Vec<(K, V)>, k: &'a K) -> Self {
-        let end = tuple_before_index!(ordered_list, k);
+        let end = tuple_from_index!(ordered_list, k);
         Self {
             map_iter: MapIter::new(&ordered_list[..end]),
         }
@@ -303,7 +351,7 @@ pub struct MapIterFrom<'a, K: 'a + Ord, V> {
 
 impl<'a, K: 'a + Ord, V> MapIterFrom<'a, K, V> {
     pub fn new(ordered_list: &'a Vec<(K, V)>, k: &K) -> Self {
-        let start = tuple_before_index!(ordered_list, k);
+        let start = tuple_from_index!(ordered_list, k);
         Self {
             map_iter: MapIter::new(&ordered_list[start..]),
         }
@@ -357,24 +405,6 @@ mod tests {
         ("k", 5),
         ("m", 6),
     ];
-
-    #[test]
-    fn next_before_works() {
-        assert_eq!(LIST.iter().next_before(&"g"), Some(&"a"));
-        assert_eq!(LIST.iter().next_before(&"a"), None);
-        let mut iter = LIST.iter();
-        assert_eq!(iter.next_before(&"c"), Some(&"a"));
-        assert_eq!(iter.next_before(&"c"), None);
-    }
-
-    #[test]
-    fn next_until_works() {
-        assert_eq!(LIST.iter().next_until(&"g"), Some(&"a"));
-        assert_eq!(LIST.iter().next_until(&"a"), Some(&"a"));
-        let mut iter = LIST.iter();
-        assert_eq!(iter.next_until(&"a"), Some(&"a"));
-        assert_eq!(iter.next_until(&"a"), None);
-    }
 
     #[test]
     fn next_from_works() {
