@@ -215,6 +215,169 @@ impl<'a, T: Ord> Iterator for SetIterUntil<'a, T> {
 
 impl<'a, T: 'a + Ord> OrderedIterator<'a, T> for SetIterUntil<'a, T> {}
 
+// MAP ITERATOR
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Ord)]
+struct KeyValuePair<K: Ord, V>(K, V);
+
+/// An Iterator over the items in an ordered map
+pub struct MapIter<'a, K: Ord, V> {
+    ordered_list: &'a Vec<(K, V)>,
+    index: usize,
+}
+
+impl<'a, K: Ord, V> MapIter<'a, K, V> {
+    pub fn new(ordered_list: &'a Vec<(K, V)>) -> Self {
+        Self {
+            ordered_list,
+            index: 0,
+        }
+    }
+}
+
+impl<'a, K: Ord, V> Iterator for MapIter<'a, K, V> {
+    type Item = &'a (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, K: 'a + Ord, V> OrderedIterator<'a, (K, V)> for MapIter<'a, K, V> {
+    fn next_from(&mut self, k: &K) -> Option<&'a (K, V)> {
+        self.index += match self.ordered_list[self.index..].binary_search(k) {
+            Ok(index) => index,
+            Err(index) => index,
+        };
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+
+    fn next_after(&mut self, k: &K) -> Option<&'a (K, V)> {
+        self.index += match self.ordered_list[self.index..].binary_search(k) {
+            Ok(index) => index + 1,
+            Err(index) => index,
+        };
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+}
+
+/// An Iterator over the items in an ordered map after a given key
+pub struct MapIterAfter<'a, K: 'a + Ord, V> {
+    set_iter: MapIter<'a, K, V>,
+}
+
+impl<'a, K: 'a + Ord, V> MapIterAfter<'a, K, V> {
+    pub fn new(ordered_list: &'a Vec<(K, V)>, k: &K) -> Self {
+        let mut set_iter = MapIter::new(ordered_list);
+        set_iter.index += match set_iter.ordered_list.binary_search(k) {
+            Ok(index) => index + 1,
+            Err(index) => index,
+        };
+        Self { set_iter }
+    }
+}
+
+impl<'a, K: Ord, V> Iterator for MapIterAfter<'a, K, V> {
+    type Item = &'a (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.set_iter.next()
+    }
+}
+
+//impl<'a, K: 'a + Ord, V>  OrderedIterator<'a, (K, V)> for MapIterAfter<'a, K, V> {}
+
+/// An Iterator over the items in an ordered map before a given key
+pub struct MapIterBefore<'a, K: 'a + Ord, V> {
+    set_iter: MapIter<'a, K, V>,
+    limit: &'a K,
+}
+
+impl<'a, K: 'a + Ord, V> MapIterBefore<'a, K, V> {
+    pub fn new(ordered_list: &'a Vec<(K, V)>, k: &'a K) -> Self {
+        Self {
+            set_iter: MapIter::new(ordered_list),
+            limit: k,
+        }
+    }
+}
+
+impl<'a, K: Ord, V> Iterator for MapIterBefore<'a, K, V> {
+    type Item = &'a (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.set_iter.next_before(self.limit)
+    }
+}
+
+//impl<'a, K: 'a + Ord, V> OrderedIterator<'a, (K, V)> for MapIterBefore<'a, K, V> {}
+
+/// An Iterator over the items in an ordered map from a given key
+pub struct MapIterFrom<'a, K: 'a + Ord, V> {
+    set_iter: MapIter<'a, K, V>,
+}
+
+impl<'a, K: 'a + Ord, V> MapIterFrom<'a, K, V> {
+    pub fn new(ordered_list: &'a Vec<(K, V)>, k: &K) -> Self {
+        let mut set_iter = MapIter::new(ordered_list);
+        set_iter.index += match set_iter.ordered_list.binary_search(k) {
+            Ok(index) => index,
+            Err(index) => index,
+        };
+        Self { set_iter }
+    }
+}
+
+impl<'a, K: Ord, V> Iterator for MapIterFrom<'a, K, V> {
+    type Item = &'a (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.set_iter.next()
+    }
+}
+
+//impl<'a, K: 'a + Ord, V> OrderedIterator<'a, (K, V)> for MapIterFrom<'a, K, V> {}
+
+/// An Iterator over the items in an ordered map until a given key
+pub struct MapIterUntil<'a, K: 'a + Ord, V> {
+    set_iter: MapIter<'a, K, V>,
+    limit: &'a K,
+}
+
+impl<'a, K: 'a + Ord, V> MapIterUntil<'a, K, V> {
+    pub fn new(ordered_list: &'a Vec<(K, V)>, k: &'a K) -> Self {
+        Self {
+            set_iter: MapIter::new(ordered_list),
+            limit: k,
+        }
+    }
+}
+
+impl<'a, K: Ord, V> Iterator for MapIterUntil<'a, K, V> {
+    type Item = &'a (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.set_iter.next_until(self.limit)
+    }
+}
+
+//impl<'a, K: 'a + Ord, V> OrderedIterator<'a, (K, V)> for MapIterUntil<'a, K, V> {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
