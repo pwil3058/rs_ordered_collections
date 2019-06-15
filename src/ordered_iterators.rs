@@ -214,6 +214,65 @@ impl<'a, K: 'a + Ord, V> SkipAheadMapIterator<'a, K, V> for MapIter<'a, K, V> {
     }
 }
 
+// MUT MAP ITERATOR
+
+/// Iterator enhancement to provide a skip ahead feature.
+pub trait SkipAheadMapIteratorMut<'a, K: 'a + Ord, V: 'a>: Iterator<Item = (&'a K, &'a mut V)> {
+    /// Return the next value in the iterator whose key is greater than
+    /// to the given key.
+    fn next_after(&mut self, target: &K) -> Option<Self::Item>;
+
+    /// Return the next value in the iterator whose key is greater than
+    /// or equal to the given key.
+    fn next_from(&mut self, target: &K) -> Option<Self::Item>;
+}
+
+/// An Iterator over the keys and mutable values in an ordered map in key order
+// Use built in mutable iterator due to insoluble lifetime issues
+pub struct MapIterMut<'a, K: Ord, V> {
+    iter_mut: IterMut<'a, (K, V)>,
+}
+
+impl<'a, K: 'a + Ord, V: 'a> MapIterMut<'a, K, V> {
+    pub fn new(ordered_list: &'a mut [(K, V)]) -> Self {
+        Self {
+            iter_mut: ordered_list.iter_mut()
+        }
+    }
+}
+
+impl<'a, K: Ord, V> Iterator for MapIterMut<'a, K, V> {
+    type Item = (&'a K, &'a mut V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some((key, value)) = self.iter_mut.next() {
+            return Some((&*key, value));
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, K: 'a + Ord, V: 'a> SkipAheadMapIteratorMut<'a, K, V> for MapIterMut<'a, K, V> {
+    fn next_after(&mut self, k: &K) -> Option<Self::Item> {
+        while let Some((key, value)) = self.iter_mut.next() {
+            if *key > *k {
+                return Some((&*key, value))
+            }
+        }
+        None
+    }
+
+    fn next_from(&mut self, k: &K) -> Option<Self::Item> {
+        while let Some((key, value)) = self.iter_mut.next() {
+            if *key >= *k {
+                return Some((&*key, value))
+            }
+        }
+        None
+    }
+}
+
 // KEY ITERATOR
 
 /// An Iterator over the keys in an ordered map
@@ -472,6 +531,20 @@ mod tests {
         assert_eq!(set_iter.next_from(&"g"), Some((&"g", &3)));
         let result: Vec<(&str, i32)> = set_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec[4..].to_vec());
+    }
+
+    #[test]
+    fn map_iter_mut_works() {
+        let mut map: Vec<(&str, i32)> = MAP.iter().map(|(x, y)| (x.clone(), y.clone())).collect();
+        for (i, pair) in MapIter::new(&map).enumerate() {
+            assert_eq!((6 - i as i32), *pair.1);
+        }
+        for (i, (_, value)) in MapIterMut::new(&mut map).enumerate() {
+            *value = i as i32 + 5;
+        }
+        for (i, pair) in MapIter::new(&map).enumerate() {
+            assert_eq!((i as i32 + 5), *pair.1);
+        }
     }
 
     #[test]
