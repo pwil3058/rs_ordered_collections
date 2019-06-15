@@ -264,6 +264,69 @@ impl<'a, K: 'a + Ord, V> SkipAheadIterator<'a, K> for KeyIter<'a, K, V> {
     }
 }
 
+// VALUE ITERATOR
+
+/// Iterator enhancement to provide a skip ahead feature.
+pub trait SkipAheadValueIterator<'a, K: 'a + Ord, V: 'a>: Iterator<Item = &'a V> {
+    /// Return the next value in the iterator whose key is greater than
+    /// to the given key.
+    fn next_after(&mut self, target: &K) -> Option<Self::Item>;
+
+    /// Return the next value in the iterator whose key is greater than
+    /// or equal to the given key.
+    fn next_from(&mut self, target: &K) -> Option<Self::Item>;
+}
+
+/// An Iterator over the values in an ordered map in key order
+pub struct ValueIter<'a, K: Ord, V> {
+    ordered_list: &'a[(K, V)],
+    index: usize,
+}
+
+impl<'a, K: Ord, V> ValueIter<'a, K, V> {
+    pub fn new(ordered_list: &'a[(K, V)]) -> Self {
+        Self {
+            ordered_list,
+            index: 0,
+        }
+    }
+}
+
+impl<'a, K: Ord, V> Iterator for ValueIter<'a, K, V> {
+    type Item = &'a V;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(&item.1)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, K: Ord, V> SkipAheadValueIterator<'a, K, V> for ValueIter<'a, K, V> {
+    fn next_after(&mut self, k: &K) -> Option<Self::Item> {
+        self.index += tuple_after_index!(self.ordered_list[self.index..], k);
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(&item.1)
+        } else {
+            None
+        }
+    }
+
+    fn next_from(&mut self, t: &K) -> Option<Self::Item> {
+        self.index += tuple_from_index!(self.ordered_list[self.index..], t);
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(&item.1)
+        } else {
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -363,6 +426,22 @@ mod tests {
         let mut set_iter = KeyIter::new(MAP);
         assert_eq!(set_iter.next_from(&"g"), Some(&"g"));
         let result: Vec<&str> = set_iter.cloned().collect();
+        assert_eq!(result, vec[4..].to_vec());
+    }
+
+    #[test]
+    fn value_iter_works() {
+        let vec: Vec<i32> = MAP.iter().map(|x| x.1).collect();
+        let set_iter = ValueIter::new(MAP);
+        let result: Vec<i32> = set_iter.cloned().collect();
+        assert_eq!(result, vec);
+        let mut set_iter = ValueIter::new(MAP);
+        assert_eq!(set_iter.next_after(&"g"), Some(&2_i32));
+        let result: Vec<i32> = set_iter.cloned().collect();
+        assert_eq!(result, vec[5..].to_vec());
+        let mut set_iter = ValueIter::new(MAP);
+        assert_eq!(set_iter.next_from(&"g"), Some(&3_i32));
+        let result: Vec<i32> = set_iter.cloned().collect();
         assert_eq!(result, vec[4..].to_vec());
     }
 
