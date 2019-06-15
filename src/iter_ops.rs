@@ -1,49 +1,27 @@
-// Copyright 2019 Peter Williams <pwil3058@gmail.com>
+//Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//Licensed under the Apache License, Version 2.0 (the "License");
+//you may not use this file except in compliance with the License.
+//You may obtain a copy of the License at
 //
 //    http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-//! Sets implemented as a sorted list.
-//! Useful for those situations when ordered iteration over a set's
-//! contents is a frequent requirement.
-
-extern crate rand;
+//Unless required by applicable law or agreed to in writing, software
+//distributed under the License is distributed on an "AS IS" BASIS,
+//WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//See the License for the specific language governing permissions and
+//limitations under the License.
 
 use std::cmp::Ordering;
-use std::iter::Iterator;
 
-pub mod iterators;
-pub mod iter_ops;
-pub mod ordered_iterators;
-pub mod ordered_map;
-pub mod ordered_set;
-//pub mod set_iterators;
+use crate::ordered_iterators::*;
 
-/// An set of items of type T ordered according to Ord (with no duplicates)
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct OrderedSet<T: Ord> {
-    ordered_list: Vec<T>,
-}
-
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct OrderedMap<K: Ord, V> {
-    ordered_list: Vec<(K, V)>,
-}
-
+/// The contents of the two iterators are disjoint
 pub fn are_disjoint<'a, T, L, R>(l_iter: &mut L, r_iter: &mut R) -> bool
 where
     T: 'a + Ord,
-    L: Iterator<Item = &'a T>,
-    R: Iterator<Item = &'a T>,
+    L: SkipAheadIterator<'a, T>,
+    R: SkipAheadIterator<'a, T>,
 {
     let mut o_l_item = l_iter.next();
     let mut o_r_item = r_iter.next();
@@ -53,10 +31,10 @@ where
             if let Some(r_item) = o_r_item {
                 match l_item.cmp(&r_item) {
                     Ordering::Less => {
-                        o_l_item = l_iter.next();
+                        o_l_item = l_iter.next_from(r_item);
                     }
                     Ordering::Greater => {
-                        o_r_item = r_iter.next();
+                        o_r_item = r_iter.next_from(l_item);
                     }
                     Ordering::Equal => {
                         return false;
@@ -71,11 +49,12 @@ where
     }
 }
 
+/// The contents of Iterator "a" are a superset of the contents of "b"
 pub fn a_contains_b<'a, T, A, B>(a_iter: &mut A, b_iter: &mut B) -> bool
 where
     T: 'a + Ord,
-    A: Iterator<Item = &'a T>,
-    B: Iterator<Item = &'a T>,
+    A: SkipAheadIterator<'a, T>,
+    B: SkipAheadIterator<'a, T>,
 {
     let mut o_a_item = a_iter.next();
     let mut o_b_item = b_iter.next();
@@ -87,7 +66,7 @@ where
                     return false;
                 }
                 Ordering::Greater => {
-                    o_a_item = a_iter.next();
+                    o_a_item = a_iter.next_from(b_item);
                 }
                 Ordering::Equal => {
                     o_b_item = b_iter.next();
@@ -114,5 +93,19 @@ mod tests {
         assert!(are_disjoint(&mut list1.iter(), &mut list2.iter()));
         assert!(!are_disjoint(&mut list1.iter(), &mut list3.iter()));
         assert!(!are_disjoint(&mut list3.iter(), &mut list2.iter()));
+    }
+
+    #[test]
+    fn a_contains_b_works() {
+        let list1 = vec!["a", "d", "g", "j", "m", "p", "s", "v", "y"];
+        let list2 = vec!["b", "e", "h", "k", "n", "q", "r", "w", "z"];
+        let list3 = vec!["a", "j", "s", "y"];
+        let list4 = vec!["e", "k", "q", "w"];
+
+        assert!(!a_contains_b(&mut list1.iter(), &mut list2.iter()));
+        assert!(a_contains_b(&mut list1.iter(), &mut list3.iter()));
+        assert!(!a_contains_b(&mut list3.iter(), &mut list1.iter()));
+        assert!(a_contains_b(&mut list2.iter(), &mut list4.iter()));
+        assert!(!a_contains_b(&mut list4.iter(), &mut list2.iter()));
     }
 }
