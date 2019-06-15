@@ -109,7 +109,7 @@ impl<'a, T: Ord> Iterator for SetIter<'a, T> {
 }
 
 impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIter<'a, T> {
-    fn next_after(&mut self, t: &T) -> Option<&'a T> {
+    fn next_after(&mut self, t: &T) -> Option<Self::Item> {
         self.index += after_index!(self.ordered_list[self.index..], t);
         if let Some(item) = self.ordered_list.get(self.index) {
             self.index += 1;
@@ -119,7 +119,7 @@ impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIter<'a, T> {
         }
     }
 
-    fn next_from(&mut self, t: &T) -> Option<&'a T> {
+    fn next_from(&mut self, t: &T) -> Option<Self::Item> {
         self.index += from_index!(self.ordered_list[self.index..], t);
         if let Some(item) = self.ordered_list.get(self.index) {
             self.index += 1;
@@ -191,7 +191,7 @@ impl<'a, K: Ord, V> Iterator for MapIter<'a, K, V> {
 }
 
 impl<'a, K: 'a + Ord, V> SkipAheadMapIterator<'a, K, V> for MapIter<'a, K, V> {
-    fn next_after(&mut self, k: &K) -> Option<&'a (K, V)> {
+    fn next_after(&mut self, k: &K) -> Option<Self::Item> {
         self.index += tuple_after_index!(self.ordered_list[self.index..], k);
         if let Some(item) = self.ordered_list.get(self.index) {
             self.index += 1;
@@ -201,11 +201,63 @@ impl<'a, K: 'a + Ord, V> SkipAheadMapIterator<'a, K, V> for MapIter<'a, K, V> {
         }
     }
 
-    fn next_from(&mut self, k: &K) -> Option<&'a (K, V)> {
+    fn next_from(&mut self, k: &K) -> Option<Self::Item> {
         self.index += tuple_from_index!(self.ordered_list[self.index..], k);
         if let Some(item) = self.ordered_list.get(self.index) {
             self.index += 1;
             Some(item)
+        } else {
+            None
+        }
+    }
+}
+
+// KEY ITERATOR
+
+/// An Iterator over the keys in an ordered map
+pub struct KeyIter<'a, K: Ord, V> {
+    ordered_list: &'a[(K, V)],
+    index: usize,
+}
+
+impl<'a, K: Ord, V> KeyIter<'a, K, V> {
+    pub fn new(ordered_list: &'a[(K, V)]) -> Self {
+        Self {
+            ordered_list,
+            index: 0,
+        }
+    }
+}
+
+impl<'a, K: Ord, V> Iterator for KeyIter<'a, K, V> {
+    type Item = &'a K;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(&item.0)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, K: 'a + Ord, V> SkipAheadIterator<'a, K> for KeyIter<'a, K, V> {
+    fn next_after(&mut self, k: &K) -> Option<Self::Item> {
+        self.index += tuple_after_index!(self.ordered_list[self.index..], k);
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(&item.0)
+        } else {
+            None
+        }
+    }
+
+    fn next_from(&mut self, t: &K) -> Option<Self::Item> {
+        self.index += tuple_from_index!(self.ordered_list[self.index..], t);
+        if let Some(item) = self.ordered_list.get(self.index) {
+            self.index += 1;
+            Some(&item.0)
         } else {
             None
         }
@@ -295,6 +347,22 @@ mod tests {
         let mut set_iter = MapIter::new(MAP);
         assert_eq!(set_iter.next_from(&"g"), Some(&("g", 3)));
         let result: Vec<(&str, i32)> = set_iter.cloned().collect();
+        assert_eq!(result, vec[4..].to_vec());
+    }
+
+    #[test]
+    fn key_iter_works() {
+        let vec = LIST.to_vec();
+        let set_iter = KeyIter::new(MAP);
+        let result: Vec<&str> = set_iter.cloned().collect();
+        assert_eq!(result, vec);
+        let mut set_iter = KeyIter::new(MAP);
+        assert_eq!(set_iter.next_after(&"g"), Some(&"i"));
+        let result: Vec<&str> = set_iter.cloned().collect();
+        assert_eq!(result, vec[5..].to_vec());
+        let mut set_iter = KeyIter::new(MAP);
+        assert_eq!(set_iter.next_from(&"g"), Some(&"g"));
+        let result: Vec<&str> = set_iter.cloned().collect();
         assert_eq!(result, vec[4..].to_vec());
     }
 
