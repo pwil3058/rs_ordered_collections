@@ -14,10 +14,10 @@
 
 use std::convert::From;
 use std::default::Default;
-use std::slice::{Iter, IterMut};
 use std::vec::Drain;
 
-use crate::iterators::{IterSetOperations, MapIter, MapMergeIter, SetConversion};
+use crate::ordered_iterators::*;
+use crate::iter_ops::*;
 
 use crate::OrderedMap;
 
@@ -73,44 +73,36 @@ impl<K: Ord, V> OrderedMap<K, V> {
         self.ordered_list.drain(..)
     }
 
-    pub fn iter(&self) -> MapIter<K, V, Iter<(K, V)>> {
-        MapIter::new(self.ordered_list.iter())
+    pub fn iter(&self) -> MapIter<K, V> {
+        MapIter::new(&self.ordered_list)
     }
 
     pub fn merge<'a>(
         &'a self,
         other: &'a Self,
-    ) -> MapMergeIter<'a, K, V, Iter<(K, V)>, Iter<(K, V)>> {
-        MapMergeIter::new(self.ordered_list.iter(), other.ordered_list.iter())
+    ) -> MapMergeIter<'a, K, V, MapIter<K, V>, MapIter<K, V>> {
+        MapMergeIter::new(self.iter(), other.iter())
     }
 
-    fn iter_mut(&mut self) -> IterMut<(K, V)> {
-        self.ordered_list.iter_mut()
+    pub fn iter_mut(&mut self) -> MapIterMut<K, V> {
+        MapIterMut::new(&mut self.ordered_list)
     }
 
-    pub fn iter_after(&self, key: &K) -> Iter<(K, V)> {
-        match self.get_index_for(key) {
-            Ok(index) => self.ordered_list[index + 1..].iter(),
-            Err(index) => self.ordered_list[index..].iter(),
-        }
+    pub fn iter_after(&self, key: &K) -> MapIter<K, V> {
+        let start = tuple_after_index![self.ordered_list, key];
+        MapIter::new(&self.ordered_list[start..])
     }
 
-    pub fn keys(&self) -> Keys<K, V> {
-        Keys {
-            iter: self.ordered_list.iter(),
-        }
+    pub fn keys(&self) -> KeyIter<K, V> {
+        KeyIter::new(&self.ordered_list)
     }
 
-    pub fn values(&self) -> Values<K, V> {
-        Values {
-            iter: self.ordered_list.iter(),
-        }
+    pub fn values(&self) -> ValueIter<K, V> {
+        ValueIter::new(&self.ordered_list)
     }
 
-    pub fn values_mut<'a>(&'a mut self) -> ValuesMut<'a, K, V> {
-        ValuesMut {
-            iter_mut: self.iter_mut(),
-        }
+    pub fn values_mut<'a>(&'a mut self) -> ValueIterMut<'a, K, V> {
+        ValueIterMut::new(&mut self.ordered_list)
     }
 
     pub fn get(&self, key: &K) -> Option<&V> {
@@ -156,58 +148,6 @@ impl<K: Ord, V> From<Vec<(K, V)>> for OrderedMap<K, V> {
         let list = Self { ordered_list };
         assert!(list.is_valid());
         list
-    }
-}
-
-pub struct Keys<'a, K, V> {
-    iter: Iter<'a, (K, V)>,
-}
-
-impl<'a, K: Ord, V> Iterator for Keys<'a, K, V> {
-    type Item = &'a K;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some((key, _)) = self.iter.next() {
-            return Some(key);
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a, K, V> IterSetOperations<'a, K> for Keys<'a, K, V> where K: 'a + Ord {}
-
-impl<'a, K, V> SetConversion<'a, K> for Keys<'a, K, V> where K: 'a + Ord + Clone {}
-
-pub struct Values<'a, K, V> {
-    iter: Iter<'a, (K, V)>,
-}
-
-impl<'a, K: Ord, V> Iterator for Values<'a, K, V> {
-    type Item = &'a V;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some((_, value)) = self.iter.next() {
-            return Some(value);
-        } else {
-            None
-        }
-    }
-}
-
-pub struct ValuesMut<'a, K: Ord, V> {
-    iter_mut: IterMut<'a, (K, V)>,
-}
-
-impl<'a, K: Ord, V> Iterator for ValuesMut<'a, K, V> {
-    type Item = &'a mut V;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some((_, value)) = self.iter_mut.next() {
-            return Some(value);
-        } else {
-            None
-        }
     }
 }
 

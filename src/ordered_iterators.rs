@@ -68,40 +68,25 @@ pub trait SkipAheadIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
     }
 }
 
-macro_rules! after_index {
-    ( $list:expr, $target:expr ) => {
-        match $list.binary_search($target) {
-            Ok(index) => index + 1,
-            Err(index) => index,
+/// Return true if the data stream from the Iterator is ordered and
+/// contains no duplicates.  Useful for testing.
+pub fn output_is_ordered_nodups<'a, T, I>(iter: &mut I) -> bool
+where
+    T: 'a + Ord,
+    I: SkipAheadIterator<'a, T>,
+{
+    let mut o_previous = iter.next();
+    while let Some(previous) = o_previous {
+        if let Some(item) = iter.next() {
+            if previous >= item {
+                return false;
+            }
+            o_previous = Some(item);
+        } else {
+            o_previous = None;
         }
-    };
-}
-
-macro_rules! from_index {
-    ( $list:expr, $target:expr ) => {
-        match $list.binary_search($target) {
-            Ok(index) => index,
-            Err(index) => index,
-        }
-    };
-}
-
-macro_rules! tuple_after_index {
-    ( $list:expr, $target:expr ) => {
-        match $list.binary_search_by(|x| x.0.cmp($target)) {
-            Ok(index) => index + 1,
-            Err(index) => index,
-        }
-    };
-}
-
-macro_rules! tuple_from_index {
-    ( $list:expr, $target:expr ) => {
-        match $list.binary_search_by(|x| x.0.cmp($target)) {
-            Ok(index) => index,
-            Err(index) => index,
-        }
-    };
+    }
+    true
 }
 
 // SET ITERATOR
@@ -502,6 +487,18 @@ mod tests {
         ("k", 1),
         ("m", 0),
     ];
+    static LIST_UNORDERED: &[&str] = &["a", "c", "e", "z", "g", "i", "k", "m"];
+
+    #[test]
+    fn output_is_ordered_nodups_works() {
+        assert!(output_is_ordered_nodups(&mut LIST.iter()));
+        let rev: Vec<&str> = LIST.iter().rev().cloned().collect();
+        assert!(!output_is_ordered_nodups(&mut rev.iter()));
+        assert!(!output_is_ordered_nodups(&mut LIST_UNORDERED.iter()));
+        let rev: Vec<&str> = LIST_UNORDERED.iter().rev().cloned().collect();
+        assert!(!output_is_ordered_nodups(&mut rev.iter()));
+        assert!(output_is_ordered_nodups(&mut MAP.iter()));
+    }
 
     #[test]
     fn defaul_next_from_works() {

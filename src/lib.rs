@@ -16,13 +16,49 @@
 //! Useful for those situations when ordered iteration over a set's
 //! contents is a frequent requirement.
 
+macro_rules! after_index {
+    ( $list:expr, $target:expr ) => {
+        match $list.binary_search($target) {
+            Ok(index) => index + 1,
+            Err(index) => index,
+        }
+    };
+}
+
+macro_rules! from_index {
+    ( $list:expr, $target:expr ) => {
+        match $list.binary_search($target) {
+            Ok(index) => index,
+            Err(index) => index,
+        }
+    };
+}
+
+macro_rules! tuple_after_index {
+    ( $list:expr, $target:expr ) => {
+        match $list.binary_search_by(|x| x.0.cmp($target)) {
+            Ok(index) => index + 1,
+            Err(index) => index,
+        }
+    };
+}
+
+macro_rules! tuple_from_index {
+    ( $list:expr, $target:expr ) => {
+        match $list.binary_search_by(|x| x.0.cmp($target)) {
+            Ok(index) => index,
+            Err(index) => index,
+        }
+    };
+}
+
 extern crate rand;
 
 use std::cmp::Ordering;
 use std::iter::Iterator;
 
 pub mod iter_ops;
-pub mod iterators;
+//pub mod iterators;
 pub mod ordered_iterators;
 pub mod ordered_map;
 pub mod ordered_set;
