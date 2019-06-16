@@ -54,15 +54,10 @@ macro_rules! tuple_from_index {
 
 extern crate rand;
 
-use std::cmp::Ordering;
-use std::iter::Iterator;
-
 pub mod iter_ops;
-//pub mod iterators;
 pub mod ordered_iterators;
 pub mod ordered_map;
 pub mod ordered_set;
-//pub mod set_iterators;
 
 /// An set of items of type T ordered according to Ord (with no duplicates)
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -75,80 +70,7 @@ pub struct OrderedMap<K: Ord, V> {
     ordered_list: Vec<(K, V)>,
 }
 
-pub fn are_disjoint<'a, T, L, R>(l_iter: &mut L, r_iter: &mut R) -> bool
-where
-    T: 'a + Ord,
-    L: Iterator<Item = &'a T>,
-    R: Iterator<Item = &'a T>,
-{
-    let mut o_l_item = l_iter.next();
-    let mut o_r_item = r_iter.next();
-
-    loop {
-        if let Some(l_item) = o_l_item {
-            if let Some(r_item) = o_r_item {
-                match l_item.cmp(&r_item) {
-                    Ordering::Less => {
-                        o_l_item = l_iter.next();
-                    }
-                    Ordering::Greater => {
-                        o_r_item = r_iter.next();
-                    }
-                    Ordering::Equal => {
-                        return false;
-                    }
-                }
-            } else {
-                return true;
-            }
-        } else {
-            return true;
-        }
-    }
-}
-
-pub fn a_contains_b<'a, T, A, B>(a_iter: &mut A, b_iter: &mut B) -> bool
-where
-    T: 'a + Ord,
-    A: Iterator<Item = &'a T>,
-    B: Iterator<Item = &'a T>,
-{
-    let mut o_a_item = a_iter.next();
-    let mut o_b_item = b_iter.next();
-
-    while let Some(b_item) = o_b_item {
-        if let Some(a_item) = o_a_item {
-            match b_item.cmp(&a_item) {
-                Ordering::Less => {
-                    return false;
-                }
-                Ordering::Greater => {
-                    o_a_item = a_iter.next();
-                }
-                Ordering::Equal => {
-                    o_b_item = b_iter.next();
-                    o_a_item = a_iter.next();
-                }
-            }
-        } else {
-            return false;
-        }
-    }
-    true
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[test]
-    fn are_disjoint_works() {
-        let list1 = vec!["a", "c", "e", "g", "i", "k", "m"];
-        let list2 = vec!["b", "d", "f", "h", "j", "l", "n"];
-        let list3 = vec!["e", "f", "x", "y", "z"];
-
-        assert!(are_disjoint(&mut list1.iter(), &mut list2.iter()));
-        assert!(!are_disjoint(&mut list1.iter(), &mut list3.iter()));
-        assert!(!are_disjoint(&mut list3.iter(), &mut list2.iter()));
-    }
+    //use super::*;
 }

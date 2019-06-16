@@ -14,6 +14,7 @@
 
 use std::slice::IterMut;
 
+use crate::OrderedMap;
 use crate::OrderedSet;
 
 pub trait ToList<'a, T>: Iterator<Item = &'a T>
@@ -33,6 +34,30 @@ where
     /// Create a OrderedSet<T> from the items in the Iterator's output
     fn to_set(&mut self) -> OrderedSet<T> {
         OrderedSet::<T> {
+            ordered_list: self.to_list(),
+        }
+    }
+}
+
+pub trait ToTupleList<'a, K, V>: Iterator<Item = (&'a K, &'a V)>
+where
+    K: 'a + Clone,
+    V: 'a + Clone,
+{
+    /// Create a Vec<T> list from the items in the Iterator's output
+    fn to_list(&mut self) -> Vec<(K, V)> {
+        self.map(|(x, y)| (x.clone(), y.clone())).collect()
+    }
+}
+
+pub trait ToMap<'a, K, V>: ToTupleList<'a, K, V>
+where
+    K: 'a + Ord + Clone,
+    V: 'a + Clone,
+{
+    /// Create a OrderedSet<T> from the items in the Iterator's output
+    fn to_map(&mut self) -> OrderedMap<K, V> {
+        OrderedMap::<K, V> {
             ordered_list: self.to_list(),
         }
     }
@@ -227,7 +252,9 @@ impl<'a, K: 'a + Ord, V> SkipAheadMapIterator<'a, K, V> for MapIter<'a, K, V> {
     }
 }
 
-//impl<'a, T: Ord + Clone> ToList<'a, T> for SetIter<'a, T> {}
+impl<'a, K: Ord + Clone, V: Clone> ToTupleList<'a, K, V> for MapIter<'a, K, V> {}
+
+impl<'a, K: Ord + Clone, V: Clone> ToMap<'a, K, V> for MapIter<'a, K, V> {}
 
 // MUT MAP ITERATOR
 

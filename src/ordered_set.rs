@@ -22,13 +22,11 @@ use std::convert::From;
 use std::default::Default;
 use std::iter::FromIterator;
 use std::ops::{BitAnd, BitOr, BitXor, Sub};
-//use std::slice::Iter;
 use std::vec::Drain;
 
 pub use crate::iter_ops::*;
 pub use crate::ordered_iterators::*;
-//use crate::OrderedMap;
-use crate::{a_contains_b, are_disjoint};
+use crate::OrderedMap;
 
 use crate::OrderedSet;
 
@@ -109,39 +107,31 @@ impl<T: Ord> OrderedSet<T> {
     }
 
     pub fn is_disjoint(&self, other: &Self) -> bool {
-        are_disjoint(&mut self.iter(), &mut other.iter())
+        are_disjoint(self.iter(), other.iter())
     }
 
-    //pub fn is_map_disjoint<V>(&self, other: &OrderedMap<T, V>) -> bool {
-    //    are_disjoint(&mut self.iter(), &mut other.keys())
-    //}
+    pub fn is_map_disjoint<V>(&self, other: &OrderedMap<T, V>) -> bool {
+        are_disjoint(self.iter(), other.keys())
+    }
 
     /// Return true if self is a subset of other
     pub fn is_subset(&self, other: &Self) -> bool {
-        a_contains_b(&mut other.iter(), &mut self.iter())
+        a_contains_b(other.iter(), self.iter())
     }
 
     /// Return true if self is a subset of other
     pub fn is_proper_subset(&self, other: &Self) -> bool {
-        other.len() > self.len()
-            && a_contains_b(&mut other.iter(), &mut self.iter())
+        other.len() > self.len() && a_contains_b(other.iter(), self.iter())
     }
 
     /// Return true if self is a superset of other
     pub fn is_superset(&self, other: &Self) -> bool {
-        a_contains_b(
-            &mut self.ordered_list.iter(),
-            &mut other.ordered_list.iter(),
-        )
+        a_contains_b(self.iter(), other.iter())
     }
 
     /// Return true if self is a superset of other
     pub fn is_proper_superset(&self, other: &Self) -> bool {
-        self.len() > other.len()
-            && a_contains_b(
-                &mut self.ordered_list.iter(),
-                &mut other.ordered_list.iter(),
-            )
+        self.len() > other.len() && a_contains_b(self.iter(), other.iter())
     }
 }
 
@@ -190,14 +180,16 @@ impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for OrderedSet<T> {
 macro_rules! define_set_operation {
     ( $iter:ident, $function:ident, $osi_function:ident, $op:ident, $op_fn:ident  ) => {
         impl<T: Ord> OrderedSet<T> {
-            pub fn $function<'a>(&'a self, other: &'a Self) -> $iter<'a, T, SetIter<'a, T>, SetIter<'a, T>>
-            {
+            pub fn $function<'a>(
+                &'a self,
+                other: &'a Self,
+            ) -> $iter<'a, T, SetIter<'a, T>, SetIter<'a, T>> {
                 $iter::new(self.iter(), other.iter())
             }
 
             pub fn $osi_function<'a, I>(&'a self, other_iter: I) -> $iter<'a, T, SetIter<'a, T>, I>
             where
-                I: SkipAheadIterator<'a, T> + Sized
+                I: SkipAheadIterator<'a, T> + Sized,
             {
                 $iter::new(self.iter(), other_iter)
             }
@@ -221,28 +213,34 @@ macro_rules! define_set_operation {
     };
 }
 
-define_set_operation!(Difference, difference, difference_i, Sub, sub);
-define_set_operation!(SymmetricDifference, symmetric_difference, symmetric_difference_i, BitXor, bitxor);
-define_set_operation!(Union, union, union_i, BitOr, bitor);
-define_set_operation!(Intersection, intersection, intersection_i, BitAnd, bitand);
+define_set_operation!(Difference, difference, osi_difference, Sub, sub);
+define_set_operation!(
+    SymmetricDifference,
+    symmetric_difference,
+    osi_symmetric_difference,
+    BitXor,
+    bitxor
+);
+define_set_operation!(Union, union, osi_union, BitOr, bitor);
+define_set_operation!(Intersection, intersection, osi_intersection, BitAnd, bitand);
 
-//macro_rules! define_set_map_operation {
-//    ( $iter:ident, $function:ident ) => {
-//        impl<T: Ord> OrderedSet<T> {
-//            pub fn $function<'a, V>(
-//                &'a self,
-//                other: &'a OrderedMap<T, V>,
-//            ) -> $iter<'a, T, Iter<T>, Keys<T, V>> {
-//                $iter::new(self.ordered_list.iter(), other.keys())
-//            }
-//        }
-//    };
-//}
+macro_rules! define_set_map_operation {
+    ( $iter:ident, $function:ident ) => {
+        impl<T: Ord> OrderedSet<T> {
+            pub fn $function<'a, V>(
+                &'a self,
+                other: &'a OrderedMap<T, V>,
+            ) -> $iter<'a, T, SetIter<T>, KeyIter<T, V>> {
+                $iter::new(self.iter(), other.keys())
+            }
+        }
+    };
+}
 
-//define_set_map_operation!(Union, map_union);
-//define_set_map_operation!(Intersection, map_intersection);
-//define_set_map_operation!(Difference, map_difference);
-//define_set_map_operation!(SymmetricDifference, map_symmetric_difference);
+define_set_map_operation!(Union, map_union);
+define_set_map_operation!(Intersection, map_intersection);
+define_set_map_operation!(Difference, map_difference);
+define_set_map_operation!(SymmetricDifference, map_symmetric_difference);
 
 #[cfg(test)]
 mod tests {

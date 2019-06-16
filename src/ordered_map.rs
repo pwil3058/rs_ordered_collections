@@ -16,8 +16,8 @@ use std::convert::From;
 use std::default::Default;
 use std::vec::Drain;
 
-use crate::ordered_iterators::*;
 use crate::iter_ops::*;
+use crate::ordered_iterators::*;
 
 use crate::OrderedMap;
 

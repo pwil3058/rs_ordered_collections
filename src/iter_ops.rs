@@ -107,7 +107,6 @@ where
     true
 }
 
-
 macro_rules! define_set_op_iterator {
     ( $doc:meta, $iter:ident ) => {
         #[$doc]
@@ -446,6 +445,24 @@ where
             }
         }
     }
+}
+
+impl<'a, K, V, L, R> ToTupleList<'a, K, V> for MapMergeIter<'a, K, V, L, R>
+where
+    K: 'a + Ord + Clone,
+    V: 'a + Clone,
+    L: SkipAheadMapIterator<'a, K, V>,
+    R: SkipAheadMapIterator<'a, K, V>,
+{
+}
+
+impl<'a, K, V, L, R> ToMap<'a, K, V> for MapMergeIter<'a, K, V, L, R>
+where
+    K: 'a + Ord + Clone,
+    V: 'a + Clone,
+    L: SkipAheadMapIterator<'a, K, V>,
+    R: SkipAheadMapIterator<'a, K, V>,
+{
 }
 
 #[cfg(test)]
