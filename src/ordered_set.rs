@@ -106,12 +106,9 @@ impl<T: Ord> OrderedSet<T> {
         true
     }
 
+    /// Return true if this OrderedSet is disjoint from the other OrderedSet
     pub fn is_disjoint(&self, other: &Self) -> bool {
         are_disjoint(self.iter(), other.iter())
-    }
-
-    pub fn is_map_disjoint<V>(&self, other: &OrderedMap<T, V>) -> bool {
-        are_disjoint(self.iter(), other.keys())
     }
 
     /// Return true if self is a subset of other
@@ -132,6 +129,31 @@ impl<T: Ord> OrderedSet<T> {
     /// Return true if self is a superset of other
     pub fn is_proper_superset(&self, other: &Self) -> bool {
         self.len() > other.len() && a_superset_b(self.iter(), other.iter())
+    }
+
+    /// Return true if this OrderedSet is disjoint from the set of keys in the given OrderedMap
+    pub fn is_map_disjoint<V>(&self, other: &OrderedMap<T, V>) -> bool {
+        are_disjoint(self.iter(), other.keys())
+    }
+
+    /// Return true if this Ordered Set is a proper subset of the set of keys in the given OrderedMap
+    pub fn is_map_proper_subset<V>(&self, other: &OrderedMap<T, V>) -> bool {
+        a_proper_superset_b(other.keys(), self.iter())
+    }
+
+    /// Return true if this Ordered Set is a proper superset of the set of keys in the given OrderedMap
+    pub fn is_map_proper_superset<V>(&self, other: &OrderedMap<T, V>) -> bool {
+        a_proper_superset_b(self.iter(), other.keys())
+    }
+
+    /// Return true if this Ordered Set is a subset of the set of keys in the given OrderedMap
+    pub fn is_map_subset<V>(&self, other: &OrderedMap<T, V>) -> bool {
+        a_superset_b(other.keys(), self.iter())
+    }
+
+    /// Return true if this Ordered Set is a superset of the set of keys in the given OrderedMap
+    pub fn is_map_superset<V>(&self, other: &OrderedMap<T, V>) -> bool {
+        are_disjoint(self.iter(), other.keys())
     }
 }
 
