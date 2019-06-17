@@ -165,12 +165,25 @@ impl<T: Ord> Default for OrderedSet<T> {
     }
 }
 
-/// Convert to OrderedSet<T> from ordered Vec<T> with no duplicates
-impl<T: Ord> From<Vec<T>> for OrderedSet<T> {
-    fn from(ordered_list: Vec<T>) -> Self {
-        let list = Self { ordered_list };
-        assert!(list.is_valid());
-        list
+/// Convert to OrderedSet<T> from a slice of elements
+impl<T: Ord + Clone> From<&[T]> for OrderedSet<T> {
+    fn from(list: &[T]) -> Self {
+        let mut ordered_set = Self::default();
+        for i in list.iter().cloned() {
+            ordered_set.insert(i);
+        }
+        ordered_set
+    }
+}
+
+/// Convert to OrderedSet<T> from a slice of elements
+impl<T: Ord + Clone> From<Vec<T>> for OrderedSet<T> {
+    fn from(mut vec: Vec<T>) -> Self {
+        let mut ordered_set = Self::default();
+        for i in vec.drain(..) {
+            ordered_set.insert(i);
+        }
+        ordered_set
     }
 }
 
@@ -296,6 +309,19 @@ mod tests {
     fn default_works() {
         assert!(OrderedSet::<String>::default().len() == 0);
         assert!(OrderedSet::<u32>::default().len() == 0);
+    }
+
+    #[test]
+    fn from_works() {
+        let set: OrderedSet<&str> = TEST_STRS.into();
+        let mut vec = TEST_STRS.to_vec();
+        vec.sort();
+        assert_eq!(vec, set.iter().to_list());
+        let uvec = TEST_STRS.to_vec();
+        let set: OrderedSet<&str> = uvec.into();
+        assert_eq!(vec, set.iter().to_list());
+        let set: OrderedSet<&str> = vec!["a", "h", "b", "z", "x", "i", "b"].into();
+        assert_eq!(vec!["a", "b", "h", "i", "x", "z"], set.iter().to_list());
     }
 
     #[test]
