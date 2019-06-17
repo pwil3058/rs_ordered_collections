@@ -23,23 +23,61 @@ pub trait IterSetOperations<'a, T>: SkipAheadIterator<'a, T> + Sized
 where
     T: 'a + Ord,
 {
+    /// Iterate over the set union of this Iterator and the given Iterator
+    /// in the order defined their elements Ord trait implementation.
     fn union<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Union<'a, T, Self, I> {
         Union::new(self, iter)
     }
 
+    /// Iterate over the set intersection of this Iterator and the given Iterator
+    /// in the order defined their elements Ord trait implementation.
     fn intersection<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Intersection<'a, T, Self, I> {
         Intersection::new(self, iter)
     }
 
+    /// Iterate over the set difference of this Iterator and the given Iterator
+    /// in the order defined their elements Ord trait implementation.
     fn difference<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Difference<'a, T, Self, I> {
         Difference::new(self, iter)
     }
 
+    /// Iterate over the set symmetric difference of this Iterator and the given Iterator
+    /// in the order defined their elements Ord trait implementation.
     fn symmetric_difference<I: SkipAheadIterator<'a, T>>(
         self,
         iter: I,
     ) -> SymmetricDifference<'a, T, Self, I> {
         SymmetricDifference::new(self, iter)
+    }
+
+    /// Is the output of the given Iterator disjoint from the output of
+    /// this iterator?
+    fn is_disjoint<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
+        are_disjoint(self, iter)
+    }
+
+    /// Is the output of the given Iterator a proper subset of the output of
+    /// this iterator?
+    fn is_proper_subset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
+        a_proper_superset_b(self, iter)
+    }
+
+    /// Is the output of the given Iterator a proper superset of the output of
+    /// this iterator?
+    fn is_proper_superset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
+        a_proper_superset_b(iter, self)
+    }
+
+    /// Is the output of the given Iterator a subset of the output of
+    /// this iterator?
+    fn is_subset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
+        a_superset_b(self, iter)
+    }
+
+    /// Is the output of the given Iterator a superset of the output of
+    /// this iterator?
+    fn is_superset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
+        a_superset_b(iter, self)
     }
 }
 
@@ -77,7 +115,7 @@ where
 }
 
 /// The contents of Iterator "a" are a superset of the contents of "b"
-pub fn a_contains_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
+pub fn a_superset_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
 where
     T: 'a + Ord,
     A: SkipAheadIterator<'a, T>,
@@ -105,6 +143,39 @@ where
         }
     }
     true
+}
+
+/// The contents of Iterator "a" are a proper superset of the contents of "b"
+pub fn a_proper_superset_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
+where
+    T: 'a + Ord,
+    A: SkipAheadIterator<'a, T>,
+    B: SkipAheadIterator<'a, T>,
+{
+    let mut o_a_item = a_iter.next();
+    let mut o_b_item = b_iter.next();
+
+    let mut result = false;
+    while let Some(b_item) = o_b_item {
+        if let Some(a_item) = o_a_item {
+            match b_item.cmp(&a_item) {
+                Ordering::Less => {
+                    return false;
+                }
+                Ordering::Greater => {
+                    result = true;
+                    o_a_item = a_iter.next_from(b_item);
+                }
+                Ordering::Equal => {
+                    o_b_item = b_iter.next();
+                    o_a_item = a_iter.next();
+                }
+            }
+        } else {
+            return false;
+        }
+    }
+    result
 }
 
 macro_rules! define_set_op_iterator {
@@ -481,17 +552,39 @@ mod tests {
     }
 
     #[test]
-    fn a_contains_b_works() {
+    fn a_superset_b_works() {
         let list1 = vec!["a", "d", "g", "j", "m", "p", "s", "v", "y"];
         let list2 = vec!["b", "e", "h", "k", "n", "q", "r", "w", "z"];
         let list3 = vec!["a", "j", "s", "y"];
         let list4 = vec!["e", "k", "q", "w"];
 
-        assert!(!a_contains_b(list1.iter(), list2.iter()));
-        assert!(a_contains_b(list1.iter(), list3.iter()));
-        assert!(!a_contains_b(list3.iter(), list1.iter()));
-        assert!(a_contains_b(list2.iter(), list4.iter()));
-        assert!(!a_contains_b(list4.iter(), list2.iter()));
+        assert!(!a_superset_b(list1.iter(), list2.iter()));
+        assert!(a_superset_b(list1.iter(), list3.iter()));
+        assert!(!a_superset_b(list3.iter(), list1.iter()));
+        assert!(a_superset_b(list2.iter(), list4.iter()));
+        assert!(!a_superset_b(list4.iter(), list2.iter()));
+        assert!(a_superset_b(list1.iter(), list1.iter()));
+        assert!(a_superset_b(list2.iter(), list2.iter()));
+        assert!(a_superset_b(list3.iter(), list3.iter()));
+        assert!(a_superset_b(list4.iter(), list4.iter()));
+    }
+
+    #[test]
+    fn a_proper_superset_b_works() {
+        let list1 = vec!["a", "d", "g", "j", "m", "p", "s", "v", "y"];
+        let list2 = vec!["b", "e", "h", "k", "n", "q", "r", "w", "z"];
+        let list3 = vec!["a", "j", "s", "y"];
+        let list4 = vec!["e", "k", "q", "w"];
+
+        assert!(!a_proper_superset_b(list1.iter(), list2.iter()));
+        assert!(a_proper_superset_b(list1.iter(), list3.iter()));
+        assert!(!a_proper_superset_b(list3.iter(), list1.iter()));
+        assert!(a_proper_superset_b(list2.iter(), list4.iter()));
+        assert!(!a_proper_superset_b(list4.iter(), list2.iter()));
+        assert!(!a_proper_superset_b(list1.iter(), list1.iter()));
+        assert!(!a_proper_superset_b(list2.iter(), list2.iter()));
+        assert!(!a_proper_superset_b(list3.iter(), list3.iter()));
+        assert!(!a_proper_superset_b(list4.iter(), list4.iter()));
     }
 
     static LIST_0: &[&str] = &["a", "c", "e", "g", "i", "k", "m"];

@@ -116,22 +116,22 @@ impl<T: Ord> OrderedSet<T> {
 
     /// Return true if self is a subset of other
     pub fn is_subset(&self, other: &Self) -> bool {
-        a_contains_b(other.iter(), self.iter())
+        a_superset_b(other.iter(), self.iter())
     }
 
     /// Return true if self is a subset of other
     pub fn is_proper_subset(&self, other: &Self) -> bool {
-        other.len() > self.len() && a_contains_b(other.iter(), self.iter())
+        other.len() > self.len() && a_superset_b(other.iter(), self.iter())
     }
 
     /// Return true if self is a superset of other
     pub fn is_superset(&self, other: &Self) -> bool {
-        a_contains_b(self.iter(), other.iter())
+        a_superset_b(self.iter(), other.iter())
     }
 
     /// Return true if self is a superset of other
     pub fn is_proper_superset(&self, other: &Self) -> bool {
-        self.len() > other.len() && a_contains_b(self.iter(), other.iter())
+        self.len() > other.len() && a_superset_b(self.iter(), other.iter())
     }
 }
 
