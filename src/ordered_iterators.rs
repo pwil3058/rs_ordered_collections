@@ -94,7 +94,7 @@ pub trait SkipAheadIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
 }
 
 pub trait ScopedIterator<'a, T: 'a + Ord>: SkipAheadIterator<'a, T> {
-    fn begin_from(self, t: &T) -> Self;
+    fn from(self, t: &T) -> Self;
 }
 
 /// Return true if the data stream from the Iterator is ordered and
@@ -171,7 +171,7 @@ impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIter<'a, T> {
 }
 
 impl<'a, T: 'a + Ord> ScopedIterator<'a, T> for SetIter<'a, T> {
-     fn begin_from(self, t: &T) -> Self {
+     fn from(self, t: &T) -> Self {
         let start = from_index!(self.ordered_list, t);
         Self::new(&self.ordered_list[start..])
     }
@@ -381,7 +381,7 @@ impl<'a, K: 'a + Ord, V> SkipAheadIterator<'a, K> for KeyIter<'a, K, V> {
 }
 
 impl<'a, K: 'a + Ord, V> ScopedIterator<'a, K> for KeyIter<'a, K, V> {
-    fn begin_from(self, k: &K) -> Self {
+    fn from(self, k: &K) -> Self {
         let start = tuple_from_index!(self.ordered_list, k);
         Self::new(&self.ordered_list[start..])
     }
@@ -595,8 +595,8 @@ mod tests {
 
     #[test]
     fn set_scoped_iter_works() {
-        assert_eq!(SetIter::new(LIST).begin_from(&"g").next(), Some(&"g"));
-        assert_eq!(SetIter::new(LIST).begin_from(&"f").next(), Some(&"g"));
+        assert_eq!(SetIter::new(LIST).from(&"g").next(), Some(&"g"));
+        assert_eq!(SetIter::new(LIST).from(&"f").next(), Some(&"g"));
     }
 
     #[test]

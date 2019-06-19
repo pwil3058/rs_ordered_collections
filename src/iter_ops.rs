@@ -266,9 +266,9 @@ macro_rules! define_set_op_iterator {
             L: ScopedIterator<'a, T>,
             R: ScopedIterator<'a, T>,
         {
-            fn begin_from(self, t: &T) -> Self {
-                let mut l_iter = self.l_iter.begin_from(t);
-                let mut r_iter = self.r_iter.begin_from(t);
+            fn from(self, t: &T) -> Self {
+                let mut l_iter = self.l_iter.from(t);
+                let mut r_iter = self.r_iter.from(t);
                 Self {
                     l_item: l_iter.next(),
                     r_item: r_iter.next(),
