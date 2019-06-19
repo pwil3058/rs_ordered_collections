@@ -93,6 +93,10 @@ pub trait SkipAheadIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
     }
 }
 
+pub trait ScopedIterator<'a, T: 'a + Ord>: SkipAheadIterator<'a, T> {
+    fn begin_from(self, t: &T) -> Self;
+}
+
 /// Return true if the data stream from the Iterator is ordered and
 /// contains no duplicates.  Useful for testing.
 pub fn output_is_ordered_nodups<'a, T, I>(iter: &mut I) -> bool
@@ -163,6 +167,13 @@ impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIter<'a, T> {
         } else {
             None
         }
+    }
+}
+
+impl<'a, T: 'a + Ord> ScopedIterator<'a, T> for SetIter<'a, T> {
+     fn begin_from(self, t: &T) -> Self {
+        let start = from_index!(self.ordered_list, t);
+        Self::new(&self.ordered_list[start..])
     }
 }
 
@@ -366,6 +377,13 @@ impl<'a, K: 'a + Ord, V> SkipAheadIterator<'a, K> for KeyIter<'a, K, V> {
         } else {
             None
         }
+    }
+}
+
+impl<'a, K: 'a + Ord, V> ScopedIterator<'a, K> for KeyIter<'a, K, V> {
+    fn begin_from(self, k: &K) -> Self {
+        let start = tuple_from_index!(self.ordered_list, k);
+        Self::new(&self.ordered_list[start..])
     }
 }
 
@@ -573,6 +591,12 @@ mod tests {
         let mut set_iter = SetIter::new(LIST);
         assert_eq!(set_iter.next_from(&"g"), Some(&"g"));
         assert_eq!(set_iter.to_list(), vec[4..].to_vec());
+    }
+
+    #[test]
+    fn set_scoped_iter_works() {
+        assert_eq!(SetIter::new(LIST).begin_from(&"g").next(), Some(&"g"));
+        assert_eq!(SetIter::new(LIST).begin_from(&"f").next(), Some(&"g"));
     }
 
     #[test]
