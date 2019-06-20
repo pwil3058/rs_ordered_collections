@@ -14,7 +14,7 @@
 
 use std::slice::IterMut;
 
-use crate::OrderedMap;
+use crate::ordered_map_new::OrderedMap;
 use crate::OrderedSet;
 
 pub trait ToList<'a, T>: Iterator<Item = &'a T>
@@ -50,16 +50,14 @@ where
     }
 }
 
-pub trait ToMap<'a, K, V>: ToTupleList<'a, K, V>
+pub trait ToMap<'a, K, V>//: ToTupleList<'a, K, V>
 where
     K: 'a + Ord + Clone,
     V: 'a + Clone,
 {
     /// Create a OrderedSet<T> from the items in the Iterator's output
     fn to_map(&mut self) -> OrderedMap<K, V> {
-        OrderedMap::<K, V> {
-            ordered_list: self.to_list(),
-        }
+        OrderedMap::<K, V>::default()
     }
 }
 
@@ -155,7 +153,7 @@ impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T, &'a T> for SetIter<'a, T> {
 }
 
 impl<'a, T: 'a + Ord> ScopedIterator<'a, T, &'a T> for SetIter<'a, T> {
-    fn from(self, t: &T) -> Self {
+     fn from(self, t: &T) -> Self {
         let start = from_index!(self.ordered_list, t);
         Self::new(&self.ordered_list[start..])
     }
@@ -169,14 +167,16 @@ impl<'a, T: Ord + Clone> ToSet<'a, T> for SetIter<'a, T> {}
 
 /// An Iterator over the items in an ordered map
 pub struct MapIter<'a, K: Ord, V> {
-    ordered_list: &'a [(K, V)],
+    keys: &'a [K],
+    values: &'a [V],
     index: usize,
 }
 
 impl<'a, K: Ord, V> MapIter<'a, K, V> {
-    pub fn new(ordered_list: &'a [(K, V)]) -> Self {
+    pub fn new(keys: &'a [K], values: &'a [V]) -> Self {
         Self {
-            ordered_list,
+            keys,
+            values,
             index: 0,
         }
     }
@@ -186,9 +186,11 @@ impl<'a, K: Ord, V> Iterator for MapIter<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(item) = self.ordered_list.get(self.index) {
+        if self.index < self.keys.len() {
+            let keys = &self.keys[self.index];
+            let values = &self.values[self.index];
             self.index += 1;
-            Some((&item.0, &item.1))
+            Some((keys, values))
         } else {
             None
         }
@@ -197,20 +199,24 @@ impl<'a, K: Ord, V> Iterator for MapIter<'a, K, V> {
 
 impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapIter<'a, K, V> {
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
-        self.index += tuple_after_index!(self.ordered_list[self.index..], k);
-        if let Some(item) = self.ordered_list.get(self.index) {
+        self.index += after_index!(self.keys[self.index..], k);
+        if self.index < self.keys.len() {
+            let keys = &self.keys[self.index];
+            let values = &self.values[self.index];
             self.index += 1;
-            Some((&item.0, &item.1))
+            Some((keys, values))
         } else {
             None
         }
     }
 
     fn next_from(&mut self, k: &K) -> Option<Self::Item> {
-        self.index += tuple_from_index!(self.ordered_list[self.index..], k);
-        if let Some(item) = self.ordered_list.get(self.index) {
+        self.index += from_index!(self.keys[self.index..], k);
+        if self.index < self.keys.len() {
+            let keys = &self.keys[self.index];
+            let values = &self.values[self.index];
             self.index += 1;
-            Some((&item.0, &item.1))
+            Some((keys, values))
         } else {
             None
         }
@@ -226,13 +232,17 @@ impl<'a, K: Ord + Clone, V: Clone> ToMap<'a, K, V> for MapIter<'a, K, V> {}
 /// An Iterator over the keys and mutable values in an ordered map in key order
 // Use built in mutable iterator due to insoluble lifetime issues
 pub struct MapIterMut<'a, K: Ord, V> {
-    iter_mut: IterMut<'a, (K, V)>,
+    keys: &'a [K],
+    values: &'a mut [V],
+    index: usize,
 }
 
 impl<'a, K: 'a + Ord, V: 'a> MapIterMut<'a, K, V> {
-    pub fn new(ordered_list: &'a mut [(K, V)]) -> Self {
+    pub fn new(keys: &'a [K], values: &'a mut [V]) -> Self {
         Self {
-            iter_mut: ordered_list.iter_mut(),
+            keys,
+            values,
+            index: 0,
         }
     }
 }
@@ -241,8 +251,11 @@ impl<'a, K: Ord, V> Iterator for MapIterMut<'a, K, V> {
     type Item = (&'a K, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some((key, value)) = self.iter_mut.next() {
-            return Some((&*key, value));
+        if self.index < self.keys.len() {
+            let key = &self.keys[self.index];
+            let value = &mut self.values[self.index];
+            self.index += 1;
+            return Some((key, value));
         } else {
             None
         }
@@ -251,106 +264,51 @@ impl<'a, K: Ord, V> Iterator for MapIterMut<'a, K, V> {
 
 impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for MapIterMut<'a, K, V> {
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
-        while let Some((key, value)) = self.iter_mut.next() {
-            if *key > *k {
-                return Some((&*key, value));
-            }
+        self.index += after_index!(self.keys[self.index..], k);
+        if self.index < self.keys.len() {
+            let key = &self.keys[self.index];
+            let value = &mut self.values[self.index];
+            self.index += 1;
+            return Some((key, value));
+        } else {
+            None
         }
-        None
     }
 
     fn next_from(&mut self, k: &K) -> Option<Self::Item> {
-        while let Some((key, value)) = self.iter_mut.next() {
-            if *key >= *k {
-                return Some((&*key, value));
-            }
+        self.index += from_index!(self.keys[self.index..], k);
+        if self.index < self.keys.len() {
+            let key = &self.keys[self.index];
+            let value = &mut self.values[self.index];
+            self.index += 1;
+            return Some((key, value));
+        } else {
+            None
         }
-        None
-    }
+   }
 }
 
 impl<'a, K: 'a + Ord, V> ScopedIterator<'a, K, (&'a K, &'a V)> for MapIter<'a, K, V> {
     fn from(self, k: &K) -> Self {
-        let start = tuple_from_index!(self.ordered_list, k);
-        Self::new(&self.ordered_list[start..])
+        let start = from_index!(self.keys, k);
+        Self::new(&self.keys[start..], &self.values[start..])
     }
 }
-
-// KEY ITERATOR
-
-/// An Iterator over the keys in an ordered map
-pub struct KeyIter<'a, K: Ord, V> {
-    ordered_list: &'a [(K, V)],
-    index: usize,
-}
-
-impl<'a, K: Ord, V> KeyIter<'a, K, V> {
-    pub fn new(ordered_list: &'a [(K, V)]) -> Self {
-        Self {
-            ordered_list,
-            index: 0,
-        }
-    }
-}
-
-impl<'a, K: Ord, V> Iterator for KeyIter<'a, K, V> {
-    type Item = &'a K;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(item) = self.ordered_list.get(self.index) {
-            self.index += 1;
-            Some(&item.0)
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a, K: 'a + Ord, V> SkipAheadIterator<'a, K, &'a K> for KeyIter<'a, K, V> {
-    fn next_after(&mut self, k: &K) -> Option<Self::Item> {
-        self.index += tuple_after_index!(self.ordered_list[self.index..], k);
-        if let Some(item) = self.ordered_list.get(self.index) {
-            self.index += 1;
-            Some(&item.0)
-        } else {
-            None
-        }
-    }
-
-    fn next_from(&mut self, t: &K) -> Option<Self::Item> {
-        self.index += tuple_from_index!(self.ordered_list[self.index..], t);
-        if let Some(item) = self.ordered_list.get(self.index) {
-            self.index += 1;
-            Some(&item.0)
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a, K: 'a + Ord, V> ScopedIterator<'a, K, &'a K> for KeyIter<'a, K, V> {
-    fn from(self, k: &K) -> Self {
-        let start = tuple_from_index!(self.ordered_list, k);
-        Self::new(&self.ordered_list[start..])
-    }
-}
-
-impl<'a, K: Ord + Clone, V> ToList<'a, K> for KeyIter<'a, K, V> {}
-
-impl<'a, K: Ord + Clone, V> ToSet<'a, K> for KeyIter<'a, K, V> {}
 
 // VALUE ITERATOR
 
 /// An Iterator over the values in an ordered map in key order
 pub struct ValueIter<'a, K: Ord, V> {
-    ordered_list: &'a [(K, V)],
+    keys: &'a [K],
+    values: &'a [V],
     index: usize,
 }
 
 impl<'a, K: Ord, V> ValueIter<'a, K, V> {
-    pub fn new(ordered_list: &'a [(K, V)]) -> Self {
+    pub fn new(keys: &'a [K], values: &'a [V]) -> Self {
         Self {
-            ordered_list,
+            keys,
+            values,
             index: 0,
         }
     }
@@ -360,9 +318,9 @@ impl<'a, K: Ord, V> Iterator for ValueIter<'a, K, V> {
     type Item = &'a V;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(item) = self.ordered_list.get(self.index) {
+        if let Some(value) = self.values.get(self.index) {
             self.index += 1;
-            Some(&item.1)
+            Some(value)
         } else {
             None
         }
@@ -371,20 +329,20 @@ impl<'a, K: Ord, V> Iterator for ValueIter<'a, K, V> {
 
 impl<'a, K: Ord, V> SkipAheadIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
-        self.index += tuple_after_index!(self.ordered_list[self.index..], k);
-        if let Some(item) = self.ordered_list.get(self.index) {
+        self.index += after_index!(self.keys[self.index..], k);
+        if let Some(value) = self.values.get(self.index) {
             self.index += 1;
-            Some(&item.1)
+            Some(value)
         } else {
             None
         }
     }
 
     fn next_from(&mut self, t: &K) -> Option<Self::Item> {
-        self.index += tuple_from_index!(self.ordered_list[self.index..], t);
-        if let Some(item) = self.ordered_list.get(self.index) {
+        self.index += from_index!(self.keys[self.index..], t);
+        if let Some(value) = self.values.get(self.index) {
             self.index += 1;
-            Some(&item.1)
+            Some(value)
         } else {
             None
         }
@@ -393,8 +351,8 @@ impl<'a, K: Ord, V> SkipAheadIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
 
 impl<'a, K: 'a + Ord, V> ScopedIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
     fn from(self, k: &K) -> Self {
-        let start = tuple_from_index!(self.ordered_list, k);
-        Self::new(&self.ordered_list[start..])
+        let start = from_index!(self.keys, k);
+        Self::new(&self.keys[start..], &self.values[start..])
     }
 }
 
@@ -403,15 +361,18 @@ impl<'a, K: Ord, V: Clone> ToList<'a, V> for ValueIter<'a, K, V> {}
 // MUT VALUE ITERATOR
 
 /// An Iterator over the values in an ordered map in key order
-// Use built in mutable iterator due to insoluble lifetime issues
 pub struct ValueIterMut<'a, K: Ord, V> {
-    iter_mut: IterMut<'a, (K, V)>,
+    keys: &'a [K],
+    values: &'a mut [V],
+    index: usize,
 }
 
 impl<'a, K: 'a + Ord, V: 'a> ValueIterMut<'a, K, V> {
-    pub fn new(ordered_list: &'a mut [(K, V)]) -> Self {
+    pub fn new(keys: &'a [K], values: &'a mut [V]) -> Self {
         Self {
-            iter_mut: ordered_list.iter_mut(),
+            keys,
+            values,
+            index: 0,
         }
     }
 }
@@ -420,8 +381,9 @@ impl<'a, K: Ord, V> Iterator for ValueIterMut<'a, K, V> {
     type Item = &'a mut V;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some((_, value)) = self.iter_mut.next() {
-            return Some(value);
+        if let Some(mut value) = self.values.get(self.index) {
+            self.index += 1;
+            Some(value)
         } else {
             None
         }
@@ -430,21 +392,23 @@ impl<'a, K: Ord, V> Iterator for ValueIterMut<'a, K, V> {
 
 impl<'a, K: Ord, V: 'a> SkipAheadIterator<'a, K, &'a mut V> for ValueIterMut<'a, K, V> {
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
-        while let Some((key, value)) = self.iter_mut.next() {
-            if *key > *k {
-                return Some(value);
-            }
+        self.index += after_index!(self.keys[self.index..], k);
+        if let Some(mut value) = self.values.get(self.index) {
+            self.index += 1;
+            Some(value)
+        } else {
+            None
         }
-        None
     }
 
     fn next_from(&mut self, k: &K) -> Option<Self::Item> {
-        while let Some((key, value)) = self.iter_mut.next() {
-            if *key >= *k {
-                return Some(value);
-            }
+        self.index += from_index!(self.keys[self.index..], k);
+        if let Some(value) = self.values.get(self.index) {
+            self.index += 1;
+            Some(value)
+        } else {
+            None
         }
-        None
     }
 }
 

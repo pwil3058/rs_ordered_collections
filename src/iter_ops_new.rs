@@ -17,7 +17,7 @@
 ///! as being sorted then the filter will produce set operations.
 use std::cmp::Ordering;
 
-use crate::ordered_iterators::*;
+use crate::ordered_iterators_new::*;
 
 pub trait IterSetOperations<'a, T>: SkipAheadIterator<'a, T, &'a T> + Sized
 where
@@ -31,10 +31,7 @@ where
 
     /// Iterate over the set intersection of this Iterator and the given Iterator
     /// in the order defined their elements Ord trait implementation.
-    fn intersection<I: SkipAheadIterator<'a, T, &'a T>>(
-        self,
-        iter: I,
-    ) -> Intersection<'a, T, Self, I> {
+    fn intersection<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> Intersection<'a, T, Self, I> {
         Intersection::new(self, iter)
     }
 
@@ -597,42 +594,15 @@ mod tests {
         let list3 = vec!["a", "j", "s", "y"];
         let list4 = vec!["e", "k", "q", "w"];
 
-        assert!(!a_proper_superset_b(
-            SetIter::new(&list1),
-            SetIter::new(&list2)
-        ));
-        assert!(a_proper_superset_b(
-            SetIter::new(&list1),
-            SetIter::new(&list3)
-        ));
-        assert!(!a_proper_superset_b(
-            SetIter::new(&list3),
-            SetIter::new(&list1)
-        ));
-        assert!(a_proper_superset_b(
-            SetIter::new(&list2),
-            SetIter::new(&list4)
-        ));
-        assert!(!a_proper_superset_b(
-            SetIter::new(&list4),
-            SetIter::new(&list2)
-        ));
-        assert!(!a_proper_superset_b(
-            SetIter::new(&list1),
-            SetIter::new(&list1)
-        ));
-        assert!(!a_proper_superset_b(
-            SetIter::new(&list2),
-            SetIter::new(&list2)
-        ));
-        assert!(!a_proper_superset_b(
-            SetIter::new(&list3),
-            SetIter::new(&list3)
-        ));
-        assert!(!a_proper_superset_b(
-            SetIter::new(&list4),
-            SetIter::new(&list4)
-        ));
+        assert!(!a_proper_superset_b(SetIter::new(&list1), SetIter::new(&list2)));
+        assert!(a_proper_superset_b(SetIter::new(&list1), SetIter::new(&list3)));
+        assert!(!a_proper_superset_b(SetIter::new(&list3), SetIter::new(&list1)));
+        assert!(a_proper_superset_b(SetIter::new(&list2), SetIter::new(&list4)));
+        assert!(!a_proper_superset_b(SetIter::new(&list4), SetIter::new(&list2)));
+        assert!(!a_proper_superset_b(SetIter::new(&list1), SetIter::new(&list1)));
+        assert!(!a_proper_superset_b(SetIter::new(&list2), SetIter::new(&list2)));
+        assert!(!a_proper_superset_b(SetIter::new(&list3), SetIter::new(&list3)));
+        assert!(!a_proper_superset_b(SetIter::new(&list4), SetIter::new(&list4)));
     }
 
     static LIST_0: &[&str] = &["a", "c", "e", "g", "i", "k", "m"];
@@ -662,24 +632,20 @@ mod tests {
 
     #[test]
     fn intersection_works() {
-        let mut test_iter =
-            Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]));
+        let mut test_iter = Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]));
         assert_eq!(test_iter.next(), None);
-        let result: Vec<&str> =
-            Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]))
-                .cloned()
-                .collect();
+        let result: Vec<&str> = Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]))
+            .cloned()
+            .collect();
         assert_eq!(result, Vec::<&str>::new());
-        let result: Vec<&str> =
-            Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
-                .cloned()
-                .collect();
+        let result: Vec<&str> = Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
+            .cloned()
+            .collect();
         assert_eq!(result, vec!["a"]);
-        let result: Vec<&str> =
-            Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
-                .symmetric_difference(SetIter::new(&LIST_1[..3]))
-                .cloned()
-                .collect();
+        let result: Vec<&str> = Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
+            .cloned()
+            .collect();
         assert_eq!(result, vec!["a", "b", "d", "f"]);
         let set = Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
             .symmetric_difference(SetIter::new(&LIST_1[..3]))
@@ -694,21 +660,18 @@ mod tests {
         assert_eq!(test_iter.next(), None);
         let mut test_iter = Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]));
         assert_eq!(test_iter.next(), Some(&"a"));
-        let result: Vec<&str> =
-            Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]))
-                .cloned()
-                .collect();
+        let result: Vec<&str> = Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]))
+            .cloned()
+            .collect();
         assert_eq!(result, vec!["a", "c", "e"]);
-        let result: Vec<&str> =
-            Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
-                .cloned()
-                .collect();
+        let result: Vec<&str> = Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
+            .cloned()
+            .collect();
         assert_eq!(result, vec!["c", "e"]);
-        let result: Vec<&str> =
-            Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
-                .symmetric_difference(SetIter::new(&LIST_1[..3]))
-                .cloned()
-                .collect();
+        let result: Vec<&str> = Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
+            .cloned()
+            .collect();
         assert_eq!(result, vec!["b", "c", "d", "e", "f"]);
         let set = Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
             .symmetric_difference(SetIter::new(&LIST_1[..3]))
@@ -719,24 +682,20 @@ mod tests {
 
     #[test]
     fn symmetric_difference_works() {
-        let mut test_iter =
-            SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]));
+        let mut test_iter = SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]));
         assert_eq!(test_iter.next(), Some(&"a"));
-        let result: Vec<&str> =
-            SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]))
-                .cloned()
-                .collect();
+        let result: Vec<&str> = SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]))
+            .cloned()
+            .collect();
         assert_eq!(result, vec!["a", "b", "c", "d", "e"]);
-        let result: Vec<&str> =
-            SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
-                .cloned()
-                .collect();
+        let result: Vec<&str> = SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
+            .cloned()
+            .collect();
         assert_eq!(result, vec!["b", "c", "e"]);
-        let result: Vec<&str> =
-            SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
-                .symmetric_difference(SetIter::new(&LIST_1[..3]))
-                .cloned()
-                .collect();
+        let result: Vec<&str> = SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
+            .cloned()
+            .collect();
         assert_eq!(result, vec!["c", "d", "e", "f"]);
         let set = SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
             .symmetric_difference(SetIter::new(&LIST_1[..3]))
