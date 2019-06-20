@@ -269,6 +269,13 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for Ma
     }
 }
 
+impl<'a, K: 'a + Ord, V> ScopedIterator<'a, K, (&'a K, &'a V)> for MapIter<'a, K, V> {
+    fn from(self, k: &K) -> Self {
+        let start = tuple_from_index!(self.ordered_list, k);
+        Self::new(&self.ordered_list[start..])
+    }
+}
+
 // KEY ITERATOR
 
 /// An Iterator over the keys in an ordered map
@@ -381,6 +388,13 @@ impl<'a, K: Ord, V> SkipAheadIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
         } else {
             None
         }
+    }
+}
+
+impl<'a, K: 'a + Ord, V> ScopedIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
+    fn from(self, k: &K) -> Self {
+        let start = tuple_from_index!(self.ordered_list, k);
+        Self::new(&self.ordered_list[start..])
     }
 }
 
