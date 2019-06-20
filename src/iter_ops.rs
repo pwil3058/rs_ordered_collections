@@ -19,31 +19,31 @@ use std::cmp::Ordering;
 
 use crate::ordered_iterators::*;
 
-pub trait IterSetOperations<'a, T>: SkipAheadIterator<'a, T> + Sized
+pub trait IterSetOperations<'a, T>: SkipAheadIterator<'a, T, &'a T> + Sized
 where
     T: 'a + Ord,
 {
     /// Iterate over the set union of this Iterator and the given Iterator
     /// in the order defined their elements Ord trait implementation.
-    fn union<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Union<'a, T, Self, I> {
+    fn union<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> Union<'a, T, Self, I> {
         Union::new(self, iter)
     }
 
     /// Iterate over the set intersection of this Iterator and the given Iterator
     /// in the order defined their elements Ord trait implementation.
-    fn intersection<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Intersection<'a, T, Self, I> {
+    fn intersection<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> Intersection<'a, T, Self, I> {
         Intersection::new(self, iter)
     }
 
     /// Iterate over the set difference of this Iterator and the given Iterator
     /// in the order defined their elements Ord trait implementation.
-    fn difference<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Difference<'a, T, Self, I> {
+    fn difference<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> Difference<'a, T, Self, I> {
         Difference::new(self, iter)
     }
 
     /// Iterate over the set symmetric difference of this Iterator and the given Iterator
     /// in the order defined their elements Ord trait implementation.
-    fn symmetric_difference<I: SkipAheadIterator<'a, T>>(
+    fn symmetric_difference<I: SkipAheadIterator<'a, T, &'a T>>(
         self,
         iter: I,
     ) -> SymmetricDifference<'a, T, Self, I> {
@@ -52,31 +52,31 @@ where
 
     /// Is the output of the given Iterator disjoint from the output of
     /// this iterator?
-    fn is_disjoint<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
+    fn is_disjoint<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> bool {
         are_disjoint(self, iter)
     }
 
     /// Is the output of the given Iterator a proper subset of the output of
     /// this iterator?
-    fn is_proper_subset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
+    fn is_proper_subset<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> bool {
         a_proper_superset_b(self, iter)
     }
 
     /// Is the output of the given Iterator a proper superset of the output of
     /// this iterator?
-    fn is_proper_superset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
+    fn is_proper_superset<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> bool {
         a_proper_superset_b(iter, self)
     }
 
     /// Is the output of the given Iterator a subset of the output of
     /// this iterator?
-    fn is_subset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
+    fn is_subset<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> bool {
         a_superset_b(self, iter)
     }
 
     /// Is the output of the given Iterator a superset of the output of
     /// this iterator?
-    fn is_superset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
+    fn is_superset<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> bool {
         a_superset_b(iter, self)
     }
 }
@@ -85,8 +85,8 @@ where
 pub fn are_disjoint<'a, T, L, R>(mut l_iter: L, mut r_iter: R) -> bool
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T>,
-    R: SkipAheadIterator<'a, T>,
+    L: SkipAheadIterator<'a, T, &'a T>,
+    R: SkipAheadIterator<'a, T, &'a T>,
 {
     let mut o_l_item = l_iter.next();
     let mut o_r_item = r_iter.next();
@@ -118,8 +118,8 @@ where
 pub fn a_superset_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
 where
     T: 'a + Ord,
-    A: SkipAheadIterator<'a, T>,
-    B: SkipAheadIterator<'a, T>,
+    A: SkipAheadIterator<'a, T, &'a T>,
+    B: SkipAheadIterator<'a, T, &'a T>,
 {
     let mut o_a_item = a_iter.next();
     let mut o_b_item = b_iter.next();
@@ -149,8 +149,8 @@ where
 pub fn a_proper_superset_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
 where
     T: 'a + Ord,
-    A: SkipAheadIterator<'a, T>,
-    B: SkipAheadIterator<'a, T>,
+    A: SkipAheadIterator<'a, T, &'a T>,
+    B: SkipAheadIterator<'a, T, &'a T>,
 {
     let mut o_a_item = a_iter.next();
     let mut o_b_item = b_iter.next();
@@ -184,8 +184,8 @@ macro_rules! define_set_op_iterator {
         pub struct $iter<'a, T, L, R>
         where
             T: Ord,
-            L: SkipAheadIterator<'a, T>,
-            R: SkipAheadIterator<'a, T>,
+            L: SkipAheadIterator<'a, T, &'a T>,
+            R: SkipAheadIterator<'a, T, &'a T>,
         {
             l_item: Option<&'a T>,
             r_item: Option<&'a T>,
@@ -196,8 +196,8 @@ macro_rules! define_set_op_iterator {
         impl<'a, T, L, R> $iter<'a, T, L, R>
         where
             T: 'a + Ord,
-            L: SkipAheadIterator<'a, T>,
-            R: SkipAheadIterator<'a, T>,
+            L: SkipAheadIterator<'a, T, &'a T>,
+            R: SkipAheadIterator<'a, T, &'a T>,
         {
             pub fn new(mut l_iter: L, mut r_iter: R) -> Self {
                 Self {
@@ -212,24 +212,24 @@ macro_rules! define_set_op_iterator {
         impl<'a, T, L, R> ToList<'a, T> for $iter<'a, T, L, R>
         where
             T: 'a + Ord + Clone,
-            L: SkipAheadIterator<'a, T>,
-            R: SkipAheadIterator<'a, T>,
+            L: SkipAheadIterator<'a, T, &'a T>,
+            R: SkipAheadIterator<'a, T, &'a T>,
         {
         }
 
         impl<'a, T, L, R> ToSet<'a, T> for $iter<'a, T, L, R>
         where
             T: 'a + Ord + Clone,
-            L: SkipAheadIterator<'a, T>,
-            R: SkipAheadIterator<'a, T>,
+            L: SkipAheadIterator<'a, T, &'a T>,
+            R: SkipAheadIterator<'a, T, &'a T>,
         {
         }
 
-        impl<'a, T, L, R> SkipAheadIterator<'a, T> for $iter<'a, T, L, R>
+        impl<'a, T, L, R> SkipAheadIterator<'a, T, &'a T> for $iter<'a, T, L, R>
         where
             T: 'a + Ord,
-            L: SkipAheadIterator<'a, T>,
-            R: SkipAheadIterator<'a, T>,
+            L: SkipAheadIterator<'a, T, &'a T>,
+            R: SkipAheadIterator<'a, T, &'a T>,
         {
             fn next_after(&mut self, t: &T) -> Option<Self::Item> {
                 if let Some(l_item) = self.l_item {
@@ -260,11 +260,11 @@ macro_rules! define_set_op_iterator {
             }
         }
 
-        impl<'a, T, L, R> ScopedIterator<'a, T> for $iter<'a, T, L, R>
+        impl<'a, T, L, R> ScopedIterator<'a, T, &'a T> for $iter<'a, T, L, R>
         where
             T: 'a + Ord,
-            L: ScopedIterator<'a, T>,
-            R: ScopedIterator<'a, T>,
+            L: ScopedIterator<'a, T, &'a T>,
+            R: ScopedIterator<'a, T, &'a T>,
         {
             fn from(self, t: &T) -> Self {
                 let mut l_iter = self.l_iter.from(t);
@@ -281,8 +281,8 @@ macro_rules! define_set_op_iterator {
         impl<'a, T, L, R> IterSetOperations<'a, T> for $iter<'a, T, L, R>
         where
             T: 'a + Ord,
-            L: SkipAheadIterator<'a, T>,
-            R: SkipAheadIterator<'a, T>,
+            L: SkipAheadIterator<'a, T, &'a T>,
+            R: SkipAheadIterator<'a, T, &'a T>,
         {
         }
     };
@@ -297,8 +297,8 @@ define_set_op_iterator!(
 impl<'a, T, L, R> Iterator for Union<'a, T, L, R>
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T>,
-    R: SkipAheadIterator<'a, T>,
+    L: SkipAheadIterator<'a, T, &'a T>,
+    R: SkipAheadIterator<'a, T, &'a T>,
 {
     type Item = &'a T;
 
@@ -344,8 +344,8 @@ define_set_op_iterator!(
 impl<'a, T, L, R> Iterator for Intersection<'a, T, L, R>
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T>,
-    R: SkipAheadIterator<'a, T>,
+    L: SkipAheadIterator<'a, T, &'a T>,
+    R: SkipAheadIterator<'a, T, &'a T>,
 {
     type Item = &'a T;
 
@@ -385,8 +385,8 @@ Iterators whose (individual) output is ordered and contains no duplicates.",
 impl<'a, T, L, R> Iterator for Difference<'a, T, L, R>
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T>,
-    R: SkipAheadIterator<'a, T>,
+    L: SkipAheadIterator<'a, T, &'a T>,
+    R: SkipAheadIterator<'a, T, &'a T>,
 {
     type Item = &'a T;
 
@@ -427,8 +427,8 @@ Iterators whose (individual) output is ordered and contains no duplicates.",
 impl<'a, T, L, R> Iterator for SymmetricDifference<'a, T, L, R>
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T>,
-    R: SkipAheadIterator<'a, T>,
+    L: SkipAheadIterator<'a, T, &'a T>,
+    R: SkipAheadIterator<'a, T, &'a T>,
 {
     type Item = &'a T;
 
@@ -470,8 +470,8 @@ pub struct MapMergeIter<'a, K, V, L, R>
 where
     K: 'a + Ord,
     V: 'a,
-    L: SkipAheadMapIterator<'a, K, V>,
-    R: SkipAheadMapIterator<'a, K, V>,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
     l_item: Option<(&'a K, &'a V)>,
     r_item: Option<(&'a K, &'a V)>,
@@ -483,8 +483,8 @@ impl<'a, K, V, L, R> MapMergeIter<'a, K, V, L, R>
 where
     K: 'a + Ord,
     V: 'a,
-    L: SkipAheadMapIterator<'a, K, V>,
-    R: SkipAheadMapIterator<'a, K, V>,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
     pub fn new(mut l_iter: L, mut r_iter: R) -> Self {
         Self {
@@ -500,8 +500,8 @@ impl<'a, K, V, L, R> Iterator for MapMergeIter<'a, K, V, L, R>
 where
     K: 'a + Ord,
     V: 'a,
-    L: SkipAheadMapIterator<'a, K, V>,
-    R: SkipAheadMapIterator<'a, K, V>,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
     type Item = (&'a K, &'a V);
 
@@ -540,8 +540,8 @@ impl<'a, K, V, L, R> ToTupleList<'a, K, V> for MapMergeIter<'a, K, V, L, R>
 where
     K: 'a + Ord + Clone,
     V: 'a + Clone,
-    L: SkipAheadMapIterator<'a, K, V>,
-    R: SkipAheadMapIterator<'a, K, V>,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
 }
 
@@ -549,8 +549,8 @@ impl<'a, K, V, L, R> ToMap<'a, K, V> for MapMergeIter<'a, K, V, L, R>
 where
     K: 'a + Ord + Clone,
     V: 'a + Clone,
-    L: SkipAheadMapIterator<'a, K, V>,
-    R: SkipAheadMapIterator<'a, K, V>,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
 }
 
@@ -564,9 +564,9 @@ mod tests {
         let list2 = vec!["b", "d", "f", "h", "j", "l", "n"];
         let list3 = vec!["e", "f", "x", "y", "z"];
 
-        assert!(are_disjoint(list1.iter(), list2.iter()));
-        assert!(!are_disjoint(list1.iter(), list3.iter()));
-        assert!(!are_disjoint(list3.iter(), list2.iter()));
+        assert!(are_disjoint(SetIter::new(&list1), SetIter::new(&list2)));
+        assert!(!are_disjoint(SetIter::new(&list1), SetIter::new(&list3)));
+        assert!(!are_disjoint(SetIter::new(&list3), SetIter::new(&list2)));
     }
 
     #[test]
@@ -576,15 +576,15 @@ mod tests {
         let list3 = vec!["a", "j", "s", "y"];
         let list4 = vec!["e", "k", "q", "w"];
 
-        assert!(!a_superset_b(list1.iter(), list2.iter()));
-        assert!(a_superset_b(list1.iter(), list3.iter()));
-        assert!(!a_superset_b(list3.iter(), list1.iter()));
-        assert!(a_superset_b(list2.iter(), list4.iter()));
-        assert!(!a_superset_b(list4.iter(), list2.iter()));
-        assert!(a_superset_b(list1.iter(), list1.iter()));
-        assert!(a_superset_b(list2.iter(), list2.iter()));
-        assert!(a_superset_b(list3.iter(), list3.iter()));
-        assert!(a_superset_b(list4.iter(), list4.iter()));
+        assert!(!a_superset_b(SetIter::new(&list1), SetIter::new(&list2)));
+        assert!(a_superset_b(SetIter::new(&list1), SetIter::new(&list3)));
+        assert!(!a_superset_b(SetIter::new(&list3), SetIter::new(&list1)));
+        assert!(a_superset_b(SetIter::new(&list2), SetIter::new(&list4)));
+        assert!(!a_superset_b(SetIter::new(&list4), SetIter::new(&list2)));
+        assert!(a_superset_b(SetIter::new(&list1), SetIter::new(&list1)));
+        assert!(a_superset_b(SetIter::new(&list2), SetIter::new(&list2)));
+        assert!(a_superset_b(SetIter::new(&list3), SetIter::new(&list3)));
+        assert!(a_superset_b(SetIter::new(&list4), SetIter::new(&list4)));
     }
 
     #[test]
@@ -594,15 +594,15 @@ mod tests {
         let list3 = vec!["a", "j", "s", "y"];
         let list4 = vec!["e", "k", "q", "w"];
 
-        assert!(!a_proper_superset_b(list1.iter(), list2.iter()));
-        assert!(a_proper_superset_b(list1.iter(), list3.iter()));
-        assert!(!a_proper_superset_b(list3.iter(), list1.iter()));
-        assert!(a_proper_superset_b(list2.iter(), list4.iter()));
-        assert!(!a_proper_superset_b(list4.iter(), list2.iter()));
-        assert!(!a_proper_superset_b(list1.iter(), list1.iter()));
-        assert!(!a_proper_superset_b(list2.iter(), list2.iter()));
-        assert!(!a_proper_superset_b(list3.iter(), list3.iter()));
-        assert!(!a_proper_superset_b(list4.iter(), list4.iter()));
+        assert!(!a_proper_superset_b(SetIter::new(&list1), SetIter::new(&list2)));
+        assert!(a_proper_superset_b(SetIter::new(&list1), SetIter::new(&list3)));
+        assert!(!a_proper_superset_b(SetIter::new(&list3), SetIter::new(&list1)));
+        assert!(a_proper_superset_b(SetIter::new(&list2), SetIter::new(&list4)));
+        assert!(!a_proper_superset_b(SetIter::new(&list4), SetIter::new(&list2)));
+        assert!(!a_proper_superset_b(SetIter::new(&list1), SetIter::new(&list1)));
+        assert!(!a_proper_superset_b(SetIter::new(&list2), SetIter::new(&list2)));
+        assert!(!a_proper_superset_b(SetIter::new(&list3), SetIter::new(&list3)));
+        assert!(!a_proper_superset_b(SetIter::new(&list4), SetIter::new(&list4)));
     }
 
     static LIST_0: &[&str] = &["a", "c", "e", "g", "i", "k", "m"];
@@ -613,18 +613,18 @@ mod tests {
 
     #[test]
     fn union_works() {
-        let mut test_iter = Union::new(LIST_0[..3].iter(), LIST_1[..2].iter());
+        let mut test_iter = Union::new(SetIter::new(&LIST_0[0..3]), SetIter::new(&LIST_1[0..2]));
         assert_eq!(test_iter.next(), Some(&"a"));
-        let result = Union::new(LIST_0[..3].iter(), LIST_1[..2].iter()).to_list();
+        let result = Union::new(SetIter::new(&LIST_0[0..3]), SetIter::new(&LIST_1[0..2])).to_list();
         assert_eq!(result, vec!["a", "b", "c", "d", "e"]);
-        let result = Union::new(LIST_0[..3].iter(), LIST_2[..2].iter()).to_list();
+        let result = Union::new(SetIter::new(&LIST_0[0..3]), SetIter::new(&LIST_2[..2])).to_list();
         assert_eq!(result, vec!["a", "b", "c", "e"]);
-        let result = Union::new(LIST_0[..3].iter(), LIST_2[..2].iter())
-            .symmetric_difference(LIST_1[..3].iter())
+        let result = Union::new(SetIter::new(&LIST_0[0..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
             .to_list();
         assert_eq!(result, vec!["a", "c", "d", "e", "f"]);
-        let set = Union::new(LIST_0[..3].iter(), LIST_2[..2].iter())
-            .symmetric_difference(LIST_1[..3].iter())
+        let set = Union::new(SetIter::new(&LIST_0[0..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
             .to_set();
         let vec: Vec<&str> = set.iter().to_list();
         assert_eq!(vec, vec!["a", "c", "d", "e", "f"]);
@@ -632,23 +632,23 @@ mod tests {
 
     #[test]
     fn intersection_works() {
-        let mut test_iter = Intersection::new(LIST_0[..3].iter(), LIST_1[..2].iter());
+        let mut test_iter = Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]));
         assert_eq!(test_iter.next(), None);
-        let result: Vec<&str> = Intersection::new(LIST_0[..3].iter(), LIST_1[..2].iter())
+        let result: Vec<&str> = Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]))
             .cloned()
             .collect();
         assert_eq!(result, Vec::<&str>::new());
-        let result: Vec<&str> = Intersection::new(LIST_0[..3].iter(), LIST_2[..2].iter())
+        let result: Vec<&str> = Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
             .cloned()
             .collect();
         assert_eq!(result, vec!["a"]);
-        let result: Vec<&str> = Intersection::new(LIST_0[..3].iter(), LIST_2[..2].iter())
-            .symmetric_difference(LIST_1[..3].iter())
+        let result: Vec<&str> = Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
             .cloned()
             .collect();
         assert_eq!(result, vec!["a", "b", "d", "f"]);
-        let set = Intersection::new(LIST_0[..3].iter(), LIST_2[..2].iter())
-            .symmetric_difference(LIST_1[..3].iter())
+        let set = Intersection::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
             .to_set();
         let vec: Vec<&str> = set.iter().cloned().collect();
         assert_eq!(vec, vec!["a", "b", "d", "f"]);
@@ -656,25 +656,25 @@ mod tests {
 
     #[test]
     fn difference() {
-        let mut test_iter = Difference::new(LIST_0[..1].iter(), LIST_0[..1].iter());
+        let mut test_iter = Difference::new(SetIter::new(&LIST_0[..1]), SetIter::new(&LIST_0[..1]));
         assert_eq!(test_iter.next(), None);
-        let mut test_iter = Difference::new(LIST_0[..3].iter(), LIST_1[..2].iter());
+        let mut test_iter = Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]));
         assert_eq!(test_iter.next(), Some(&"a"));
-        let result: Vec<&str> = Difference::new(LIST_0[..3].iter(), LIST_1[..2].iter())
+        let result: Vec<&str> = Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]))
             .cloned()
             .collect();
         assert_eq!(result, vec!["a", "c", "e"]);
-        let result: Vec<&str> = Difference::new(LIST_0[..3].iter(), LIST_2[..2].iter())
+        let result: Vec<&str> = Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
             .cloned()
             .collect();
         assert_eq!(result, vec!["c", "e"]);
-        let result: Vec<&str> = Difference::new(LIST_0[..3].iter(), LIST_2[..2].iter())
-            .symmetric_difference(LIST_1[..3].iter())
+        let result: Vec<&str> = Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
             .cloned()
             .collect();
         assert_eq!(result, vec!["b", "c", "d", "e", "f"]);
-        let set = Difference::new(LIST_0[..3].iter(), LIST_2[..2].iter())
-            .symmetric_difference(LIST_1[..3].iter())
+        let set = Difference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
             .to_set();
         let vec: Vec<&str> = set.iter().cloned().collect();
         assert_eq!(vec, vec!["b", "c", "d", "e", "f"]);
@@ -682,23 +682,23 @@ mod tests {
 
     #[test]
     fn symmetric_difference_works() {
-        let mut test_iter = SymmetricDifference::new(LIST_0[..3].iter(), LIST_1[..2].iter());
+        let mut test_iter = SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]));
         assert_eq!(test_iter.next(), Some(&"a"));
-        let result: Vec<&str> = SymmetricDifference::new(LIST_0[..3].iter(), LIST_1[..2].iter())
+        let result: Vec<&str> = SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_1[..2]))
             .cloned()
             .collect();
         assert_eq!(result, vec!["a", "b", "c", "d", "e"]);
-        let result: Vec<&str> = SymmetricDifference::new(LIST_0[..3].iter(), LIST_2[..2].iter())
+        let result: Vec<&str> = SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
             .cloned()
             .collect();
         assert_eq!(result, vec!["b", "c", "e"]);
-        let result: Vec<&str> = SymmetricDifference::new(LIST_0[..3].iter(), LIST_2[..2].iter())
-            .symmetric_difference(LIST_1[..3].iter())
+        let result: Vec<&str> = SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
             .cloned()
             .collect();
         assert_eq!(result, vec!["c", "d", "e", "f"]);
-        let set = SymmetricDifference::new(LIST_0[..3].iter(), LIST_2[..2].iter())
-            .symmetric_difference(LIST_1[..3].iter())
+        let set = SymmetricDifference::new(SetIter::new(&LIST_0[..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
             .to_set();
         let vec: Vec<&str> = set.iter().cloned().collect();
         assert_eq!(vec, vec!["c", "d", "e", "f"]);

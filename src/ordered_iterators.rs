@@ -65,36 +65,20 @@ where
 
 /// Iterator enhancement to provide a skip ahead feature. This mechanism
 /// is used to optimise implementation of set operation (difference, intersection, etc)
-/// iterators. NB the default implementations do not provide any performance
-/// enhancement and are only provided so that algorithms that use these
-/// functions will still work.
-pub trait SkipAheadIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
+/// iterators.
+pub trait SkipAheadIterator<'a, K: 'a + Ord, V: 'a>: Iterator<Item = V> {
     /// Return the next item in the iterator whose value is greater than
     /// to the given value.
-    fn next_after(&mut self, target: &T) -> Option<Self::Item> {
-        while let Some(item) = self.next() {
-            if *item > *target {
-                return Some(item);
-            }
-        }
-        None
-    }
+    fn next_after(&mut self, key: &K) -> Option<Self::Item>;
 
     /// Return the next item in the iterator whose value is greater than
     /// or equal to the given value.  Used to optimise set operation
     /// iterators.
-    fn next_from(&mut self, target: &T) -> Option<Self::Item> {
-        while let Some(item) = self.next() {
-            if *item >= *target {
-                return Some(item);
-            }
-        }
-        None
-    }
+    fn next_from(&mut self, key: &K) -> Option<Self::Item>;
 }
 
-pub trait ScopedIterator<'a, T: 'a + Ord>: SkipAheadIterator<'a, T> {
-    fn from(self, t: &T) -> Self;
+pub trait ScopedIterator<'a, K: 'a + Ord, V: 'a>: SkipAheadIterator<'a, K, V> {
+    fn from(self, key: &K) -> Self;
 }
 
 /// Return true if the data stream from the Iterator is ordered and
@@ -102,7 +86,7 @@ pub trait ScopedIterator<'a, T: 'a + Ord>: SkipAheadIterator<'a, T> {
 pub fn output_is_ordered_nodups<'a, T, I>(iter: &mut I) -> bool
 where
     T: 'a + Ord,
-    I: SkipAheadIterator<'a, T>,
+    I: SkipAheadIterator<'a, T, &'a T>,
 {
     let mut o_previous = iter.next();
     while let Some(previous) = o_previous {
@@ -148,7 +132,7 @@ impl<'a, T: Ord> Iterator for SetIter<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIter<'a, T> {
+impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T, &'a T> for SetIter<'a, T> {
     fn next_after(&mut self, t: &T) -> Option<Self::Item> {
         self.index += after_index!(self.ordered_list[self.index..], t);
         if let Some(item) = self.ordered_list.get(self.index) {
@@ -170,7 +154,7 @@ impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIter<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> ScopedIterator<'a, T> for SetIter<'a, T> {
+impl<'a, T: 'a + Ord> ScopedIterator<'a, T, &'a T> for SetIter<'a, T> {
      fn from(self, t: &T) -> Self {
         let start = from_index!(self.ordered_list, t);
         Self::new(&self.ordered_list[start..])
@@ -182,36 +166,6 @@ impl<'a, T: Ord + Clone> ToList<'a, T> for SetIter<'a, T> {}
 impl<'a, T: Ord + Clone> ToSet<'a, T> for SetIter<'a, T> {}
 
 // MAP ITERATOR
-
-/// Iterator enhancement to provide a skip ahead feature. This mechanism
-/// is used to optimise implementation of set operation (difference, intersection, etc)
-/// iterators. NB the default implementations do not provide any performance
-/// enhancement and are only provided so that algorithms that use these
-/// functions will still work.
-pub trait SkipAheadMapIterator<'a, K: 'a + Ord, V: 'a>: Iterator<Item = (&'a K, &'a V)> {
-    /// Return the next item in the iterator whose value is greater than
-    /// to the given value.
-    fn next_after(&mut self, target: &K) -> Option<Self::Item> {
-        while let Some(item) = self.next() {
-            if item.0 > target {
-                return Some((&item.0, &item.1));
-            }
-        }
-        None
-    }
-
-    /// Return the next item in the iterator whose value is greater than
-    /// or equal to the given value.  Used to optimise set operation
-    /// iterators.
-    fn next_from(&mut self, target: &K) -> Option<Self::Item> {
-        while let Some(item) = self.next() {
-            if item.0 >= target {
-                return Some((&item.0, &item.1));
-            }
-        }
-        None
-    }
-}
 
 /// An Iterator over the items in an ordered map
 pub struct MapIter<'a, K: Ord, V> {
@@ -241,7 +195,7 @@ impl<'a, K: Ord, V> Iterator for MapIter<'a, K, V> {
     }
 }
 
-impl<'a, K: 'a + Ord, V> SkipAheadMapIterator<'a, K, V> for MapIter<'a, K, V> {
+impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapIter<'a, K, V> {
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
         self.index += tuple_after_index!(self.ordered_list[self.index..], k);
         if let Some(item) = self.ordered_list.get(self.index) {
@@ -269,19 +223,6 @@ impl<'a, K: Ord + Clone, V: Clone> ToMap<'a, K, V> for MapIter<'a, K, V> {}
 
 // MUT MAP ITERATOR
 
-/// Iterator enhancement to provide a skip ahead feature.
-pub trait SkipAheadMapIteratorMut<'a, K: 'a + Ord, V: 'a>:
-    Iterator<Item = (&'a K, &'a mut V)>
-{
-    /// Return the next value in the iterator whose key is greater than
-    /// to the given key.
-    fn next_after(&mut self, target: &K) -> Option<Self::Item>;
-
-    /// Return the next value in the iterator whose key is greater than
-    /// or equal to the given key.
-    fn next_from(&mut self, target: &K) -> Option<Self::Item>;
-}
-
 /// An Iterator over the keys and mutable values in an ordered map in key order
 // Use built in mutable iterator due to insoluble lifetime issues
 pub struct MapIterMut<'a, K: Ord, V> {
@@ -308,7 +249,7 @@ impl<'a, K: Ord, V> Iterator for MapIterMut<'a, K, V> {
     }
 }
 
-impl<'a, K: 'a + Ord, V: 'a> SkipAheadMapIteratorMut<'a, K, V> for MapIterMut<'a, K, V> {
+impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for MapIterMut<'a, K, V> {
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
         while let Some((key, value)) = self.iter_mut.next() {
             if *key > *k {
@@ -358,7 +299,7 @@ impl<'a, K: Ord, V> Iterator for KeyIter<'a, K, V> {
     }
 }
 
-impl<'a, K: 'a + Ord, V> SkipAheadIterator<'a, K> for KeyIter<'a, K, V> {
+impl<'a, K: 'a + Ord, V> SkipAheadIterator<'a, K, &'a K> for KeyIter<'a, K, V> {
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
         self.index += tuple_after_index!(self.ordered_list[self.index..], k);
         if let Some(item) = self.ordered_list.get(self.index) {
@@ -380,7 +321,7 @@ impl<'a, K: 'a + Ord, V> SkipAheadIterator<'a, K> for KeyIter<'a, K, V> {
     }
 }
 
-impl<'a, K: 'a + Ord, V> ScopedIterator<'a, K> for KeyIter<'a, K, V> {
+impl<'a, K: 'a + Ord, V> ScopedIterator<'a, K, &'a K> for KeyIter<'a, K, V> {
     fn from(self, k: &K) -> Self {
         let start = tuple_from_index!(self.ordered_list, k);
         Self::new(&self.ordered_list[start..])
@@ -392,17 +333,6 @@ impl<'a, K: Ord + Clone, V> ToList<'a, K> for KeyIter<'a, K, V> {}
 impl<'a, K: Ord + Clone, V> ToSet<'a, K> for KeyIter<'a, K, V> {}
 
 // VALUE ITERATOR
-
-/// Iterator enhancement to provide a skip ahead feature.
-pub trait SkipAheadValueIterator<'a, K: 'a + Ord, V: 'a>: Iterator<Item = &'a V> {
-    /// Return the next value in the iterator whose key is greater than
-    /// to the given key.
-    fn next_after(&mut self, target: &K) -> Option<Self::Item>;
-
-    /// Return the next value in the iterator whose key is greater than
-    /// or equal to the given key.
-    fn next_from(&mut self, target: &K) -> Option<Self::Item>;
-}
 
 /// An Iterator over the values in an ordered map in key order
 pub struct ValueIter<'a, K: Ord, V> {
@@ -432,7 +362,7 @@ impl<'a, K: Ord, V> Iterator for ValueIter<'a, K, V> {
     }
 }
 
-impl<'a, K: Ord, V> SkipAheadValueIterator<'a, K, V> for ValueIter<'a, K, V> {
+impl<'a, K: Ord, V> SkipAheadIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
         self.index += tuple_after_index!(self.ordered_list[self.index..], k);
         if let Some(item) = self.ordered_list.get(self.index) {
@@ -457,17 +387,6 @@ impl<'a, K: Ord, V> SkipAheadValueIterator<'a, K, V> for ValueIter<'a, K, V> {
 impl<'a, K: Ord, V: Clone> ToList<'a, V> for ValueIter<'a, K, V> {}
 
 // MUT VALUE ITERATOR
-
-/// Iterator enhancement to provide a skip ahead feature.
-pub trait SkipAheadValueIteratorMut<'a, K: Ord, V: 'a>: Iterator<Item = &'a mut V> {
-    /// Return the next value in the iterator whose key is greater than
-    /// to the given key.
-    fn next_after(&mut self, target: &K) -> Option<Self::Item>;
-
-    /// Return the next value in the iterator whose key is greater than
-    /// or equal to the given key.
-    fn next_from(&mut self, target: &K) -> Option<Self::Item>;
-}
 
 /// An Iterator over the values in an ordered map in key order
 // Use built in mutable iterator due to insoluble lifetime issues
@@ -495,7 +414,7 @@ impl<'a, K: Ord, V> Iterator for ValueIterMut<'a, K, V> {
     }
 }
 
-impl<'a, K: Ord, V: 'a> SkipAheadValueIteratorMut<'a, K, V> for ValueIterMut<'a, K, V> {
+impl<'a, K: Ord, V: 'a> SkipAheadIterator<'a, K, &'a mut V> for ValueIterMut<'a, K, V> {
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
         while let Some((key, value)) = self.iter_mut.next() {
             if *key > *k {
@@ -518,9 +437,6 @@ impl<'a, K: Ord, V: 'a> SkipAheadValueIteratorMut<'a, K, V> for ValueIterMut<'a,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::slice::Iter;
-
-    impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for Iter<'a, T> {}
 
     static LIST: &[&str] = &["a", "c", "e", "g", "i", "k", "m"];
     static MAP: &[(&str, i32)] = &[
@@ -536,31 +452,13 @@ mod tests {
 
     #[test]
     fn output_is_ordered_nodups_works() {
-        assert!(output_is_ordered_nodups(&mut LIST.iter()));
+        assert!(output_is_ordered_nodups(&mut SetIter::new(LIST)));
         let rev: Vec<&str> = LIST.iter().rev().cloned().collect();
-        assert!(!output_is_ordered_nodups(&mut rev.iter()));
-        assert!(!output_is_ordered_nodups(&mut LIST_UNORDERED.iter()));
+        assert!(!output_is_ordered_nodups(&mut SetIter::new(&rev)));
+        assert!(!output_is_ordered_nodups(&mut SetIter::new(LIST_UNORDERED)));
         let rev: Vec<&str> = LIST_UNORDERED.iter().rev().cloned().collect();
-        assert!(!output_is_ordered_nodups(&mut rev.iter()));
-        assert!(output_is_ordered_nodups(&mut MAP.iter()));
-    }
-
-    #[test]
-    fn defaul_next_from_works() {
-        assert_eq!(LIST.iter().next_from(&"g"), Some(&"g"));
-        assert_eq!(LIST.iter().next_from(&"a"), Some(&"a"));
-        let mut iter = LIST.iter();
-        assert_eq!(iter.next_from(&"m"), Some(&"m"));
-        assert_eq!(iter.next_from(&"m"), None);
-    }
-
-    #[test]
-    fn defaul_next_after_works() {
-        assert_eq!(LIST.iter().next_after(&"g"), Some(&"i"));
-        assert_eq!(LIST.iter().next_after(&"a"), Some(&"c"));
-        let mut iter = LIST.iter();
-        assert_eq!(iter.next_after(&"k"), Some(&"m"));
-        assert_eq!(iter.next_after(&"k"), None);
+        assert!(!output_is_ordered_nodups(&mut SetIter::new(&rev)));
+        //assert!(output_is_ordered_nodups(&mut MapIter::new(MAP)));
     }
 
     #[test]
