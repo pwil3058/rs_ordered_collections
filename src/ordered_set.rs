@@ -24,9 +24,9 @@ use std::iter::FromIterator;
 use std::ops::{BitAnd, BitOr, BitXor, Sub};
 use std::vec::Drain;
 
-pub use crate::iter_ops_new::*;
-pub use crate::ordered_iterators_new::*;
-use crate::ordered_map_new::OrderedMap;
+pub use crate::iter_ops::*;
+pub use crate::ordered_iterators::*;
+use crate::OrderedMap;
 
 use crate::OrderedSet;
 

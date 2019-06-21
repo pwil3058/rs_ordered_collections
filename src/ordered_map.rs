@@ -14,7 +14,6 @@
 
 use std::convert::From;
 use std::default::Default;
-use std::vec::Drain;
 
 use crate::iter_ops::*;
 use crate::ordered_iterators::*;
@@ -24,7 +23,8 @@ use crate::OrderedMap;
 impl<K: Ord, V> Default for OrderedMap<K, V> {
     fn default() -> Self {
         Self {
-            ordered_list: vec![],
+            keys: vec![],
+            values: vec![],
         }
     }
 }
@@ -34,47 +34,46 @@ impl<K: Ord, V> OrderedMap<K, V> {
         Self::default()
     }
 
-    /// Return true if ordered_list is sorted and contains no duplicate keys
+    /// Return true if keys is sorted and contains no duplicate keys
+    /// and the same length as values.
     pub fn is_valid(&self) -> bool {
-        for i in 1..self.ordered_list.len() {
-            if self.ordered_list[i - 1].0 >= self.ordered_list[i].0 {
+        for i in 1..self.keys.len() {
+            if self.keys[i - 1] >= self.keys[i] {
                 return false;
             }
         }
-        true
+        self.keys.len() == self.values.len()
     }
 
     /// Return the number of items in this set.
     pub fn len(&self) -> usize {
-        self.ordered_list.len()
+        self.keys.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.ordered_list.len() == 0
+        self.keys.len() == 0
     }
 
     pub fn capacity(&self) -> usize {
-        self.ordered_list.capacity()
+        self.keys.capacity().min(self.values.capacity())
     }
 
     pub fn clear(&mut self) {
-        self.ordered_list.clear()
-    }
-
-    fn get_index_for(&self, key: &K) -> Result<usize, usize> {
-        self.ordered_list.binary_search_by(|k| k.0.cmp(key))
+        self.keys.clear();
+        self.values.clear();
     }
 
     pub fn contains_key(&self, key: &K) -> bool {
-        self.get_index_for(key).is_ok()
+        self.keys.binary_search(key).is_ok()
     }
 
-    pub fn drain(&mut self) -> Drain<(K, V)> {
-        self.ordered_list.drain(..)
-    }
+    // TODO: implement a useful drain for OrderedMap
+    //pub fn drain(&mut self) -> Drain<(K, V)> {
+    //    self.keys.drain(..)
+    //}
 
     pub fn iter(&self) -> MapIter<K, V> {
-        MapIter::new(&self.ordered_list)
+        MapIter::new(&self.keys, &self.values)
     }
 
     pub fn merge<'a>(
@@ -85,69 +84,89 @@ impl<K: Ord, V> OrderedMap<K, V> {
     }
 
     pub fn iter_mut(&mut self) -> MapIterMut<K, V> {
-        MapIterMut::new(&mut self.ordered_list)
+        MapIterMut::new(&self.keys, &mut self.values)
     }
 
     pub fn iter_after(&self, key: &K) -> MapIter<K, V> {
-        let start = tuple_after_index![self.ordered_list, key];
-        MapIter::new(&self.ordered_list[start..])
+        let start = after_index![self.keys, key];
+        MapIter::new(&self.keys[start..], &self.values[start..])
     }
 
-    pub fn keys(&self) -> KeyIter<K, V> {
-        KeyIter::new(&self.ordered_list)
+    pub fn keys(&self) -> SetIter<K> {
+        SetIter::new(&self.keys)
     }
 
     pub fn values(&self) -> ValueIter<K, V> {
-        ValueIter::new(&self.ordered_list)
+        ValueIter::new(&self.keys, &self.values)
     }
 
     pub fn values_mut<'a>(&'a mut self) -> ValueIterMut<'a, K, V> {
-        ValueIterMut::new(&mut self.ordered_list)
+        ValueIterMut::new(&self.keys, &mut self.values)
     }
 
     pub fn get(&self, key: &K) -> Option<&V> {
-        if let Ok(index) = self.get_index_for(key) {
-            Some(&self.ordered_list.get(index).unwrap().1)
+        if let Ok(index) = self.keys.binary_search(key) {
+            Some(&self.values[index])
         } else {
             None
         }
     }
 
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
-        if let Ok(index) = self.get_index_for(key) {
-            Some(&mut self.ordered_list.get_mut(index).unwrap().1)
+        if let Ok(index) = self.keys.binary_search(key) {
+            Some(&mut self.values[index])
         } else {
             None
         }
     }
 
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
-        match self.get_index_for(&key) {
+        match self.keys.binary_search(&key) {
             Ok(index) => {
-                let old = self.ordered_list.remove(index);
-                self.ordered_list.insert(index, (key, value));
-                Some(old.1)
+                let old = self.values.remove(index);
+                self.values.insert(index, value);
+                Some(old)
             }
             Err(index) => {
-                self.ordered_list.insert(index, (key, value));
+                self.keys.insert(index, key);
+                self.values.insert(index, value);
                 None
             }
         }
     }
 
     pub fn remove(&mut self, key: &K) -> Option<V> {
-        match self.get_index_for(&key) {
-            Ok(index) => Some(self.ordered_list.remove(index).1),
+        match self.keys.binary_search(&key) {
+            Ok(index) => {
+                self.keys.remove(index);
+                Some(self.values.remove(index))
+            }
             Err(_) => None,
         }
     }
 }
-/// Convert to OrderedMap<K, V> from ordered Vec<(K, V)> with no duplicates
+
+/// Convert to OrderedMap<K, V> from a Vec<(K, V)>
 impl<K: Ord, V> From<Vec<(K, V)>> for OrderedMap<K, V> {
-    fn from(ordered_list: Vec<(K, V)>) -> Self {
-        let list = Self { ordered_list };
-        assert!(list.is_valid());
-        list
+    fn from(mut list: Vec<(K, V)>) -> Self {
+        let mut map = Self::default();
+        for (key, value) in list.drain(..) {
+            map.insert(key, value);
+        }
+        assert!(map.is_valid());
+        map
+    }
+}
+
+/// Convert to OrderedMap<K, V> from a Vec<(K, V)>
+impl<K: Ord + Clone, V: Clone> From<&[(K, V)]> for OrderedMap<K, V> {
+    fn from(list: &[(K, V)]) -> Self {
+        let mut map = Self::default();
+        for (key, value) in list.iter() {
+            map.insert(key.clone(), value.clone());
+        }
+        assert!(map.is_valid());
+        map
     }
 }
 

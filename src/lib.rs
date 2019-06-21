@@ -34,32 +34,11 @@ macro_rules! from_index {
     };
 }
 
-macro_rules! tuple_after_index {
-    ( $list:expr, $target:expr ) => {
-        match $list.binary_search_by(|x| x.0.cmp($target)) {
-            Ok(index) => index + 1,
-            Err(index) => index,
-        }
-    };
-}
-
-macro_rules! tuple_from_index {
-    ( $list:expr, $target:expr ) => {
-        match $list.binary_search_by(|x| x.0.cmp($target)) {
-            Ok(index) => index,
-            Err(index) => index,
-        }
-    };
-}
-
 extern crate rand;
 
-//pub mod iter_ops;
-//pub mod ordered_iterators;
-//pub mod ordered_map;
-pub mod iter_ops_new;
-pub mod ordered_iterators_new;
-pub mod ordered_map_new;
+pub mod iter_ops;
+pub mod ordered_iterators;
+pub mod ordered_map;
 pub mod ordered_set;
 
 /// An set of items of type T ordered according to Ord (with no duplicates)
@@ -68,10 +47,11 @@ pub struct OrderedSet<T: Ord> {
     ordered_list: Vec<T>,
 }
 
-//#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-//pub struct OrderedMap<K: Ord, V> {
-//    ordered_list: Vec<(K, V)>,
-//}
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct OrderedMap<K: Ord, V> {
+    keys: Vec<K>,
+    values: Vec<V>,
+}
 
 #[cfg(test)]
 mod tests {
