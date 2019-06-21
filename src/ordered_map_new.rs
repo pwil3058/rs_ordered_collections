@@ -64,13 +64,15 @@ impl<K: Ord, V> OrderedMap<K, V> {
     }
 
     pub fn clear(&mut self) {
-        self.keys.clear()
+        self.keys.clear();
+        self.values.clear();
     }
 
     pub fn contains_key(&self, key: &K) -> bool {
         self.keys.binary_search(key).is_ok()
     }
 
+    // TODO: implement a useful drain for OrderedMap
     //pub fn drain(&mut self) -> Drain<(K, V)> {
     //    self.keys.drain(..)
     //}
@@ -128,8 +130,6 @@ impl<K: Ord, V> OrderedMap<K, V> {
             Ok(index) => {
                 let old = self.values.remove(index);
                 self.values.insert(index, value);
-                self.keys.remove(index);
-                self.keys.insert(index, key);
                 Some(old)
             }
             Err(index) => {

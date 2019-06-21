@@ -54,12 +54,12 @@ macro_rules! tuple_from_index {
 
 extern crate rand;
 
-pub mod iter_ops;
-pub mod ordered_iterators;
-pub mod ordered_map;
-//pub mod iter_ops_new;
-//pub mod ordered_iterators_new;
-//pub mod ordered_map_new;
+//pub mod iter_ops;
+//pub mod ordered_iterators;
+//pub mod ordered_map;
+pub mod iter_ops_new;
+pub mod ordered_iterators_new;
+pub mod ordered_map_new;
 pub mod ordered_set;
 
 /// An set of items of type T ordered according to Ord (with no duplicates)
@@ -68,10 +68,10 @@ pub struct OrderedSet<T: Ord> {
     ordered_list: Vec<T>,
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct OrderedMap<K: Ord, V> {
-    ordered_list: Vec<(K, V)>,
-}
+//#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+//pub struct OrderedMap<K: Ord, V> {
+//    ordered_list: Vec<(K, V)>,
+//}
 
 #[cfg(test)]
 mod tests {

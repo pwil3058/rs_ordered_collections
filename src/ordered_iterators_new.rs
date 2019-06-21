@@ -233,15 +233,15 @@ impl<'a, K: Ord + Clone, V: Clone> ToMap<'a, K, V> for MapIter<'a, K, V> {}
 // Use built in mutable iterator due to insoluble lifetime issues
 pub struct MapIterMut<'a, K: Ord, V> {
     keys: &'a [K],
-    values: &'a mut [V],
     index: usize,
+    iter_mut: IterMut<'a, V>,
 }
 
 impl<'a, K: 'a + Ord, V: 'a> MapIterMut<'a, K, V> {
     pub fn new(keys: &'a [K], values: &'a mut [V]) -> Self {
         Self {
+            iter_mut: values.iter_mut(),
             keys,
-            values,
             index: 0,
         }
     }
@@ -251,11 +251,9 @@ impl<'a, K: Ord, V> Iterator for MapIterMut<'a, K, V> {
     type Item = (&'a K, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.keys.len() {
-            let key = &self.keys[self.index];
-            let value = &mut self.values[self.index];
+        if let Some(key) = self.keys.get(self.index) {
             self.index += 1;
-            return Some((key, value));
+            Some((key, self.iter_mut.next().unwrap()))
         } else {
             None
         }
@@ -264,24 +262,28 @@ impl<'a, K: Ord, V> Iterator for MapIterMut<'a, K, V> {
 
 impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for MapIterMut<'a, K, V> {
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
-        self.index += after_index!(self.keys[self.index..], k);
-        if self.index < self.keys.len() {
-            let key = &self.keys[self.index];
-            let value = &mut self.values[self.index];
+        let index_incr = after_index!(self.keys[self.index..], k);
+        for _ in 0..index_incr {
+            self.iter_mut.next();
+        }
+        self.index += index_incr;
+        if let Some(key) = self.keys.get(self.index) {
             self.index += 1;
-            return Some((key, value));
+            Some((key, self.iter_mut.next().unwrap()))
         } else {
             None
         }
     }
 
     fn next_from(&mut self, k: &K) -> Option<Self::Item> {
-        self.index += from_index!(self.keys[self.index..], k);
-        if self.index < self.keys.len() {
-            let key = &self.keys[self.index];
-            let value = &mut self.values[self.index];
+        let index_incr = from_index!(self.keys[self.index..], k);
+        for _ in 0..index_incr {
+            self.iter_mut.next();
+        }
+        self.index += index_incr;
+        if let Some(key) = self.keys.get(self.index) {
             self.index += 1;
-            return Some((key, value));
+            Some((key, self.iter_mut.next().unwrap()))
         } else {
             None
         }
@@ -363,15 +365,15 @@ impl<'a, K: Ord, V: Clone> ToList<'a, V> for ValueIter<'a, K, V> {}
 /// An Iterator over the values in an ordered map in key order
 pub struct ValueIterMut<'a, K: Ord, V> {
     keys: &'a [K],
-    values: &'a mut [V],
     index: usize,
+    iter_mut: IterMut<'a, V>,
 }
 
 impl<'a, K: 'a + Ord, V: 'a> ValueIterMut<'a, K, V> {
     pub fn new(keys: &'a [K], values: &'a mut [V]) -> Self {
         Self {
+            iter_mut: values.iter_mut(),
             keys,
-            values,
             index: 0,
         }
     }
@@ -381,9 +383,9 @@ impl<'a, K: Ord, V> Iterator for ValueIterMut<'a, K, V> {
     type Item = &'a mut V;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(mut value) = self.values.get(self.index) {
+        if self.index < self.keys.len() {
             self.index += 1;
-            Some(value)
+            self.iter_mut.next()
         } else {
             None
         }
@@ -392,20 +394,28 @@ impl<'a, K: Ord, V> Iterator for ValueIterMut<'a, K, V> {
 
 impl<'a, K: Ord, V: 'a> SkipAheadIterator<'a, K, &'a mut V> for ValueIterMut<'a, K, V> {
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
-        self.index += after_index!(self.keys[self.index..], k);
-        if let Some(mut value) = self.values.get(self.index) {
+        let index_incr = after_index!(self.keys[self.index..], k);
+        for _ in 0..index_incr {
+            self.iter_mut.next();
+        }
+        self.index += index_incr;
+        if self.index < self.keys.len() {
             self.index += 1;
-            Some(value)
+            self.iter_mut.next()
         } else {
             None
         }
     }
 
     fn next_from(&mut self, k: &K) -> Option<Self::Item> {
-        self.index += from_index!(self.keys[self.index..], k);
-        if let Some(value) = self.values.get(self.index) {
+        let index_incr = from_index!(self.keys[self.index..], k);
+        for _ in 0..index_incr {
+            self.iter_mut.next();
+        }
+        self.index += index_incr;
+        if self.index < self.keys.len() {
             self.index += 1;
-            Some(value)
+            self.iter_mut.next()
         } else {
             None
         }
@@ -417,6 +427,7 @@ mod tests {
     use super::*;
 
     static LIST: &[&str] = &["a", "c", "e", "g", "i", "k", "m"];
+    static VALUES: &[i32] = &[6, 5, 4, 3, 2, 1, 0];
     static MAP: &[(&str, i32)] = &[
         ("a", 6),
         ("c", 5),
@@ -441,18 +452,18 @@ mod tests {
 
     #[test]
     fn map_next_after_works() {
-        assert_eq!(MapIter::new(MAP).next_after(&"g"), Some((&"i", &2)));
-        assert_eq!(MapIter::new(MAP).next_after(&"a"), Some((&"c", &5)));
-        let mut iter = MapIter::new(MAP);
+        assert_eq!(MapIter::new(LIST, VALUES).next_after(&"g"), Some((&"i", &2)));
+        assert_eq!(MapIter::new(LIST, VALUES).next_after(&"a"), Some((&"c", &5)));
+        let mut iter = MapIter::new(LIST, VALUES);
         assert_eq!(iter.next_after(&"k"), Some((&"m", &0)));
         assert_eq!(iter.next_after(&"k"), None);
     }
 
     #[test]
     fn map_next_from_works() {
-        assert_eq!(MapIter::new(MAP).next_from(&"g"), Some((&"g", &3)));
-        assert_eq!(MapIter::new(MAP).next_from(&"a"), Some((&"a", &6)));
-        let mut iter = MapIter::new(MAP);
+        assert_eq!(MapIter::new(LIST, VALUES).next_from(&"g"), Some((&"g", &3)));
+        assert_eq!(MapIter::new(LIST, VALUES).next_from(&"a"), Some((&"a", &6)));
+        let mut iter = MapIter::new(LIST, VALUES);
         assert_eq!(iter.next_from(&"m"), Some((&"m", &0)));
         assert_eq!(iter.next_from(&"m"), None);
     }
@@ -478,14 +489,14 @@ mod tests {
     #[test]
     fn map_iter_works() {
         let vec = MAP.to_vec();
-        let set_iter = MapIter::new(MAP);
+        let set_iter = MapIter::new(LIST, VALUES);
         let result: Vec<(&str, i32)> = set_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec);
-        let mut set_iter = MapIter::new(MAP);
+        let mut set_iter = MapIter::new(LIST, VALUES);
         assert_eq!(set_iter.next_after(&"g"), Some((&"i", &2)));
         let result: Vec<(&str, i32)> = set_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec[5..].to_vec());
-        let mut set_iter = MapIter::new(MAP);
+        let mut set_iter = MapIter::new(LIST, VALUES);
         assert_eq!(set_iter.next_from(&"g"), Some((&"g", &3)));
         let result: Vec<(&str, i32)> = set_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec[4..].to_vec());
@@ -493,64 +504,52 @@ mod tests {
 
     #[test]
     fn map_iter_mut_works() {
-        let mut map: Vec<(&str, i32)> = MAP.iter().map(|(x, y)| (x.clone(), y.clone())).collect();
-        for (i, pair) in MapIter::new(&map).enumerate() {
+        let mut values: Vec<i32> = VALUES.iter().cloned().collect();
+        for (i, pair) in MapIter::new(LIST, &values).enumerate() {
             assert_eq!((6 - i as i32), *pair.1);
         }
-        for (i, (_, value)) in MapIterMut::new(&mut map).enumerate() {
+        for (i, (_, value)) in MapIterMut::new(LIST, &mut values).enumerate() {
             *value = i as i32 + 5;
         }
-        for (i, pair) in MapIter::new(&map).enumerate() {
+        for (i, pair) in MapIter::new(LIST, &values).enumerate() {
             assert_eq!((i as i32 + 5), *pair.1);
         }
     }
 
     #[test]
-    fn key_iter_works() {
-        let vec = LIST.to_vec();
-        assert_eq!(KeyIter::new(MAP).to_list(), vec);
-        let mut set_iter = KeyIter::new(MAP);
-        assert_eq!(set_iter.next_after(&"g"), Some(&"i"));
-        assert_eq!(set_iter.to_list(), vec[5..].to_vec());
-        let mut set_iter = KeyIter::new(MAP);
-        assert_eq!(set_iter.next_from(&"g"), Some(&"g"));
-        assert_eq!(set_iter.to_list(), vec[4..].to_vec());
-    }
-
-    #[test]
     fn value_iter_mut_works() {
-        let vec: Vec<i32> = MAP.iter().map(|x| x.1).collect();
-        let mut map: Vec<(&str, i32)> = MAP.iter().map(|(x, y)| (x.clone(), y.clone())).collect();
-        let set_iter = ValueIterMut::new(&mut map);
+        let vec: Vec<i32> = VALUES.iter().cloned().collect();
+        let mut values: Vec<i32> = VALUES.iter().cloned().collect();
+        let set_iter = ValueIterMut::new(LIST, &mut values);
         let result: Vec<i32> = set_iter.map(|x| *x).collect();
         assert_eq!(result, vec);
-        let mut set_iter = ValueIterMut::new(&mut map);
+        let mut set_iter = ValueIterMut::new(LIST, &mut values);
         assert_eq!(set_iter.next_after(&"g"), Some(&mut 2_i32));
         let result: Vec<i32> = set_iter.map(|x| *x).collect();
         assert_eq!(result, vec[5..].to_vec());
-        let mut set_iter = ValueIterMut::new(&mut map);
+        let mut set_iter = ValueIterMut::new(LIST, &mut values);
         assert_eq!(set_iter.next_from(&"g"), Some(&mut 3_i32));
         let result: Vec<i32> = set_iter.map(|x| *x).collect();
         assert_eq!(result, vec[4..].to_vec());
-        for (i, value) in ValueIter::new(&map).enumerate() {
+        for (i, value) in ValueIter::new(LIST, &values).enumerate() {
             assert!(*value != i as i32 || i == 3);
         }
-        for (i, value) in ValueIterMut::new(&mut map).enumerate() {
+        for (i, value) in ValueIterMut::new(LIST, &mut values).enumerate() {
             *value = i as i32;
         }
-        for (i, value) in ValueIter::new(&map).enumerate() {
+        for (i, value) in ValueIter::new(LIST, &values).enumerate() {
             assert_eq!(*value, i as i32);
         }
     }
 
     #[test]
     fn value_iter_works() {
-        let vec: Vec<i32> = MAP.iter().map(|x| x.1).collect();
-        assert_eq!(ValueIter::new(MAP).to_list(), vec);
-        let mut set_iter = ValueIter::new(MAP);
+        let vec: Vec<i32> = VALUES.iter().cloned().collect();
+        assert_eq!(ValueIter::new(LIST, VALUES).to_list(), vec);
+        let mut set_iter = ValueIter::new(LIST, VALUES);
         assert_eq!(set_iter.next_after(&"g"), Some(&2_i32));
         assert_eq!(set_iter.to_list(), vec[5..].to_vec());
-        let mut set_iter = ValueIter::new(MAP);
+        let mut set_iter = ValueIter::new(LIST, VALUES);
         assert_eq!(set_iter.next_from(&"g"), Some(&3_i32));
         assert_eq!(set_iter.to_list(), vec[4..].to_vec());
     }

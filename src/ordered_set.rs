@@ -24,9 +24,9 @@ use std::iter::FromIterator;
 use std::ops::{BitAnd, BitOr, BitXor, Sub};
 use std::vec::Drain;
 
-pub use crate::iter_ops::*;
-pub use crate::ordered_iterators::*;
-use crate::OrderedMap;
+pub use crate::iter_ops_new::*;
+pub use crate::ordered_iterators_new::*;
+use crate::ordered_map_new::OrderedMap;
 
 use crate::OrderedSet;
 
@@ -92,6 +92,7 @@ impl<T: Ord> OrderedSet<T> {
         SetIter::new(&self.ordered_list[start..])
     }
 
+    // TODO: implement a more useful drain for OrderedSet
     pub fn drain(&mut self) -> Drain<T> {
         self.ordered_list.drain(..)
     }
@@ -265,7 +266,7 @@ macro_rules! define_set_map_operation {
             pub fn $function<'a, V>(
                 &'a self,
                 other: &'a OrderedMap<T, V>,
-            ) -> $iter<'a, T, SetIter<T>, KeyIter<T, V>> {
+            ) -> $iter<'a, T, SetIter<T>, SetIter<T>> {
                 $iter::new(self.iter(), other.keys())
             }
         }
