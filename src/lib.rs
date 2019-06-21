@@ -42,7 +42,7 @@ pub mod ordered_map;
 pub mod ordered_set;
 
 /// An set of items of type T ordered according to Ord (with no duplicates)
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct OrderedSet<T: Ord> {
     ordered_list: Vec<T>,
 }

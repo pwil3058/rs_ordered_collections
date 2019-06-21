@@ -18,6 +18,7 @@
 
 extern crate rand;
 
+use std::cmp::Ordering;
 use std::convert::From;
 use std::default::Default;
 use std::iter::FromIterator;
