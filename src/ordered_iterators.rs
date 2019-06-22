@@ -17,6 +17,8 @@ use std::slice::IterMut;
 use crate::OrderedMap;
 use crate::OrderedSet;
 
+use crate::iter_ops::IterSetOperations;
+
 pub trait ToList<'a, T>: Iterator<Item = &'a T>
 where
     T: 'a + Clone,
@@ -151,6 +153,8 @@ impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T, &'a T> for SetIter<'a, T> {
 impl<'a, T: Ord + Clone> ToList<'a, T> for SetIter<'a, T> {}
 
 impl<'a, T: Ord + Clone> ToSet<'a, T> for SetIter<'a, T> {}
+
+impl<'a, T: Ord + Clone> IterSetOperations<'a, T> for SetIter<'a, T> {}
 
 // MAP ITERATOR
 
