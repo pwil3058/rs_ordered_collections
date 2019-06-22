@@ -81,10 +81,6 @@ pub trait SkipAheadIterator<'a, T: 'a + Ord, V: 'a>: Iterator<Item = V> {
     fn next_from(&mut self, t: &T) -> Option<Self::Item>;
 }
 
-pub trait ScopedIterator<'a, K: 'a + Ord, V: 'a>: SkipAheadIterator<'a, K, V> {
-    fn from(self, key: &K) -> Self;
-}
-
 /// Return true if the data stream from the Iterator is ordered and
 /// contains no duplicates.  Useful for testing.
 pub fn output_is_ordered_nodups<'a, T, I>(iter: &mut I) -> bool
@@ -165,13 +161,6 @@ impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T, &'a T> for SetIter<'a, T> {
         } else {
             None
         }
-    }
-}
-
-impl<'a, T: 'a + Ord> ScopedIterator<'a, T, &'a T> for SetIter<'a, T> {
-    fn from(self, t: &T) -> Self {
-        let start = from_index!(self.ordered_list, t);
-        Self::new(&self.ordered_list[start..])
     }
 }
 
@@ -336,13 +325,6 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for Ma
     }
 }
 
-impl<'a, K: 'a + Ord, V> ScopedIterator<'a, K, (&'a K, &'a V)> for MapIter<'a, K, V> {
-    fn from(self, k: &K) -> Self {
-        let start = from_index!(self.keys, k);
-        Self::new(&self.keys[start..], &self.values[start..])
-    }
-}
-
 // VALUE ITERATOR
 
 /// An Iterator over the values in an ordered map in key order
@@ -404,13 +386,6 @@ impl<'a, K: Ord, V> SkipAheadIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
         } else {
             None
         }
-    }
-}
-
-impl<'a, K: 'a + Ord, V> ScopedIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
-    fn from(self, k: &K) -> Self {
-        let start = from_index!(self.keys, k);
-        Self::new(&self.keys[start..], &self.values[start..])
     }
 }
 
@@ -563,9 +538,9 @@ mod tests {
     }
 
     #[test]
-    fn set_scoped_iter_works() {
-        assert_eq!(SetIter::new(LIST).from(&"g").next(), Some(&"g"));
-        assert_eq!(SetIter::new(LIST).from(&"f").next(), Some(&"g"));
+    fn skip_until_works() {
+        assert_eq!(SetIter::new(LIST).skip_until(&"g").next(), Some(&"g"));
+        assert_eq!(SetIter::new(LIST).skip_until(&"f").next(), Some(&"g"));
     }
 
     #[test]

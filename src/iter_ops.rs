@@ -291,24 +291,6 @@ macro_rules! define_set_op_iterator {
             }
         }
 
-        impl<'a, T, L, R> ScopedIterator<'a, T, &'a T> for $iter<'a, T, L, R>
-        where
-            T: 'a + Ord,
-            L: ScopedIterator<'a, T, &'a T>,
-            R: ScopedIterator<'a, T, &'a T>,
-        {
-            fn from(self, t: &T) -> Self {
-                let mut l_iter = self.l_iter.from(t);
-                let mut r_iter = self.r_iter.from(t);
-                Self {
-                    l_item: l_iter.next(),
-                    r_item: r_iter.next(),
-                    l_iter: l_iter,
-                    r_iter: r_iter,
-                }
-            }
-        }
-
         impl<'a, T, L, R> IterSetOperations<'a, T> for $iter<'a, T, L, R>
         where
             T: 'a + Ord,
