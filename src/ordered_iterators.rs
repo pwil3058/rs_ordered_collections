@@ -64,15 +64,21 @@ where
 /// Iterator enhancement to provide a skip ahead feature. This mechanism
 /// is used to optimise implementation of set operation (difference, intersection, etc)
 /// iterators.
-pub trait SkipAheadIterator<'a, K: 'a + Ord, V: 'a>: Iterator<Item = V> {
+pub trait SkipAheadIterator<'a, T: 'a + Ord, V: 'a>: Iterator<Item = V> {
+    /// Skip ahead to the item in the iterator after the selector.
+    fn skip_after(&mut self, t: &T) -> &mut Self;
+
+    /// Skip ahead to the item in the iterator at or after the selector.
+    fn skip_until(&mut self, t: &T) -> &mut Self;
+
     /// Return the next item in the iterator whose value is greater than
     /// to the given value.
-    fn next_after(&mut self, key: &K) -> Option<Self::Item>;
+    fn next_after(&mut self, t: &T) -> Option<Self::Item>;
 
     /// Return the next item in the iterator whose value is greater than
     /// or equal to the given value.  Used to optimise set operation
     /// iterators.
-    fn next_from(&mut self, key: &K) -> Option<Self::Item>;
+    fn next_from(&mut self, t: &T) -> Option<Self::Item>;
 }
 
 pub trait ScopedIterator<'a, K: 'a + Ord, V: 'a>: SkipAheadIterator<'a, K, V> {
@@ -131,6 +137,16 @@ impl<'a, T: Ord> Iterator for SetIter<'a, T> {
 }
 
 impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T, &'a T> for SetIter<'a, T> {
+    fn skip_after(&mut self, t: &T) -> &mut Self {
+        self.index += after_index!(self.ordered_list[self.index..], t);
+        self
+    }
+
+    fn skip_until(&mut self, t: &T) -> &mut Self {
+        self.index += from_index!(self.ordered_list[self.index..], t);
+        self
+    }
+
     fn next_after(&mut self, t: &T) -> Option<Self::Item> {
         self.index += after_index!(self.ordered_list[self.index..], t);
         if let Some(item) = self.ordered_list.get(self.index) {
@@ -198,6 +214,16 @@ impl<'a, K: Ord, V> Iterator for MapIter<'a, K, V> {
 }
 
 impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapIter<'a, K, V> {
+    fn skip_after(&mut self, k: &K) -> &mut Self {
+        self.index += after_index!(self.keys[self.index..], k);
+        self
+    }
+
+    fn skip_until(&mut self, k: &K) -> &mut Self {
+        self.index += from_index!(self.keys[self.index..], k);
+        self
+    }
+
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
         self.index += after_index!(self.keys[self.index..], k);
         if self.index < self.keys.len() {
@@ -261,6 +287,26 @@ impl<'a, K: Ord, V> Iterator for MapIterMut<'a, K, V> {
 }
 
 impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for MapIterMut<'a, K, V> {
+    /// Skip ahead to the item in the iterator after the selector key.
+    fn skip_after(&mut self, k: &K) -> &mut Self {
+        let index_incr = after_index!(self.keys[self.index..], k);
+        for _ in 0..index_incr {
+            self.iter_mut.next();
+        }
+        self.index += index_incr;
+        self
+    }
+
+    /// Skip ahead to the item in the iterator at or after the selector key.
+    fn skip_until(&mut self, k: &K) -> &mut Self {
+        let index_incr = from_index!(self.keys[self.index..], k);
+        for _ in 0..index_incr {
+            self.iter_mut.next();
+        }
+        self.index += index_incr;
+        self
+    }
+
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
         let index_incr = after_index!(self.keys[self.index..], k);
         for _ in 0..index_incr {
@@ -330,6 +376,16 @@ impl<'a, K: Ord, V> Iterator for ValueIter<'a, K, V> {
 }
 
 impl<'a, K: Ord, V> SkipAheadIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
+    fn skip_after(&mut self, k: &K) -> &mut Self {
+        self.index += after_index!(self.keys[self.index..], k);
+        self
+    }
+
+    fn skip_until(&mut self, k: &K) -> &mut Self {
+        self.index += from_index!(self.keys[self.index..], k);
+        self
+    }
+
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
         self.index += after_index!(self.keys[self.index..], k);
         if let Some(value) = self.values.get(self.index) {
@@ -393,6 +449,26 @@ impl<'a, K: Ord, V> Iterator for ValueIterMut<'a, K, V> {
 }
 
 impl<'a, K: Ord, V: 'a> SkipAheadIterator<'a, K, &'a mut V> for ValueIterMut<'a, K, V> {
+    /// Skip ahead to the item in the iterator after the selector key.
+    fn skip_after(&mut self, k: &K) -> &mut Self {
+        let index_incr = after_index!(self.keys[self.index..], k);
+        for _ in 0..index_incr {
+            self.iter_mut.next();
+        }
+        self.index += index_incr;
+        self
+    }
+
+    /// Skip ahead to the item in the iterator at or after the selector key.
+    fn skip_until(&mut self, k: &K) -> &mut Self {
+        let index_incr = from_index!(self.keys[self.index..], k);
+        for _ in 0..index_incr {
+            self.iter_mut.next();
+        }
+        self.index += index_incr;
+        self
+    }
+
     fn next_after(&mut self, k: &K) -> Option<Self::Item> {
         let index_incr = after_index!(self.keys[self.index..], k);
         for _ in 0..index_incr {

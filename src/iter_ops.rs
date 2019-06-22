@@ -234,6 +234,34 @@ macro_rules! define_set_op_iterator {
             L: SkipAheadIterator<'a, T, &'a T>,
             R: SkipAheadIterator<'a, T, &'a T>,
         {
+            fn skip_after(&mut self, t: &T) -> &mut Self {
+                if let Some(l_item) = self.l_item {
+                    if t <= l_item {
+                        self.l_item = self.l_iter.skip_after(t).next();
+                    }
+                }
+                if let Some(r_item) = self.r_item {
+                    if t <= r_item {
+                        self.r_item = self.r_iter.skip_after(t).next();
+                    }
+                }
+                self
+            }
+
+            fn skip_until(&mut self, t: &T) -> &mut Self {
+                if let Some(l_item) = self.l_item {
+                    if t < l_item {
+                        self.l_item = self.l_iter.skip_until(t).next();
+                    }
+                }
+                if let Some(r_item) = self.r_item {
+                    if t < r_item {
+                        self.r_item = self.r_iter.skip_until(t).next();
+                    }
+                }
+                self
+            }
+
             fn next_after(&mut self, t: &T) -> Option<Self::Item> {
                 if let Some(l_item) = self.l_item {
                     if t <= l_item {
