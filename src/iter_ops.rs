@@ -261,34 +261,6 @@ macro_rules! define_set_op_iterator {
                 }
                 self
             }
-
-            fn next_after(&mut self, t: &T) -> Option<Self::Item> {
-                if let Some(l_item) = self.l_item {
-                    if t <= l_item {
-                        self.l_item = self.l_iter.next_after(t);
-                    }
-                }
-                if let Some(r_item) = self.r_item {
-                    if t <= r_item {
-                        self.r_item = self.r_iter.next_after(t);
-                    }
-                }
-                self.next()
-            }
-
-            fn next_from(&mut self, t: &T) -> Option<Self::Item> {
-                if let Some(l_item) = self.l_item {
-                    if t < l_item {
-                        self.l_item = self.l_iter.next_after(t);
-                    }
-                }
-                if let Some(r_item) = self.r_item {
-                    if t < r_item {
-                        self.r_item = self.r_iter.next_after(t);
-                    }
-                }
-                self.next()
-            }
         }
 
         impl<'a, T, L, R> IterSetOperations<'a, T> for $iter<'a, T, L, R>

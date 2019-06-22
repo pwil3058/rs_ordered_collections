@@ -73,12 +73,16 @@ pub trait SkipAheadIterator<'a, T: 'a + Ord, V: 'a>: Iterator<Item = V> {
 
     /// Return the next item in the iterator whose value is greater than
     /// to the given value.
-    fn next_after(&mut self, t: &T) -> Option<Self::Item>;
+    fn next_after(&mut self, t: &T) -> Option<Self::Item> {
+        self.skip_past(t).next()
+    }
 
     /// Return the next item in the iterator whose value is greater than
     /// or equal to the given value.  Used to optimise set operation
     /// iterators.
-    fn next_from(&mut self, t: &T) -> Option<Self::Item>;
+    fn next_from(&mut self, t: &T) -> Option<Self::Item> {
+        self.skip_until(t).next()
+    }
 }
 
 /// Return true if the data stream from the Iterator is ordered and
@@ -142,26 +146,6 @@ impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T, &'a T> for SetIter<'a, T> {
         self.index += from_index!(self.ordered_list[self.index..], t);
         self
     }
-
-    fn next_after(&mut self, t: &T) -> Option<Self::Item> {
-        self.index += after_index!(self.ordered_list[self.index..], t);
-        if let Some(item) = self.ordered_list.get(self.index) {
-            self.index += 1;
-            Some(item)
-        } else {
-            None
-        }
-    }
-
-    fn next_from(&mut self, t: &T) -> Option<Self::Item> {
-        self.index += from_index!(self.ordered_list[self.index..], t);
-        if let Some(item) = self.ordered_list.get(self.index) {
-            self.index += 1;
-            Some(item)
-        } else {
-            None
-        }
-    }
 }
 
 impl<'a, T: Ord + Clone> ToList<'a, T> for SetIter<'a, T> {}
@@ -211,30 +195,6 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapIte
     fn skip_until(&mut self, k: &K) -> &mut Self {
         self.index += from_index!(self.keys[self.index..], k);
         self
-    }
-
-    fn next_after(&mut self, k: &K) -> Option<Self::Item> {
-        self.index += after_index!(self.keys[self.index..], k);
-        if self.index < self.keys.len() {
-            let keys = &self.keys[self.index];
-            let values = &self.values[self.index];
-            self.index += 1;
-            Some((keys, values))
-        } else {
-            None
-        }
-    }
-
-    fn next_from(&mut self, k: &K) -> Option<Self::Item> {
-        self.index += from_index!(self.keys[self.index..], k);
-        if self.index < self.keys.len() {
-            let keys = &self.keys[self.index];
-            let values = &self.values[self.index];
-            self.index += 1;
-            Some((keys, values))
-        } else {
-            None
-        }
     }
 }
 
@@ -295,34 +255,6 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for Ma
         self.index += index_incr;
         self
     }
-
-    fn next_after(&mut self, k: &K) -> Option<Self::Item> {
-        let index_incr = after_index!(self.keys[self.index..], k);
-        for _ in 0..index_incr {
-            self.iter_mut.next();
-        }
-        self.index += index_incr;
-        if let Some(key) = self.keys.get(self.index) {
-            self.index += 1;
-            Some((key, self.iter_mut.next().unwrap()))
-        } else {
-            None
-        }
-    }
-
-    fn next_from(&mut self, k: &K) -> Option<Self::Item> {
-        let index_incr = from_index!(self.keys[self.index..], k);
-        for _ in 0..index_incr {
-            self.iter_mut.next();
-        }
-        self.index += index_incr;
-        if let Some(key) = self.keys.get(self.index) {
-            self.index += 1;
-            Some((key, self.iter_mut.next().unwrap()))
-        } else {
-            None
-        }
-    }
 }
 
 // VALUE ITERATOR
@@ -366,26 +298,6 @@ impl<'a, K: Ord, V> SkipAheadIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
     fn skip_until(&mut self, k: &K) -> &mut Self {
         self.index += from_index!(self.keys[self.index..], k);
         self
-    }
-
-    fn next_after(&mut self, k: &K) -> Option<Self::Item> {
-        self.index += after_index!(self.keys[self.index..], k);
-        if let Some(value) = self.values.get(self.index) {
-            self.index += 1;
-            Some(value)
-        } else {
-            None
-        }
-    }
-
-    fn next_from(&mut self, t: &K) -> Option<Self::Item> {
-        self.index += from_index!(self.keys[self.index..], t);
-        if let Some(value) = self.values.get(self.index) {
-            self.index += 1;
-            Some(value)
-        } else {
-            None
-        }
     }
 }
 
@@ -444,34 +356,6 @@ impl<'a, K: Ord, V: 'a> SkipAheadIterator<'a, K, &'a mut V> for ValueIterMut<'a,
         }
         self.index += index_incr;
         self
-    }
-
-    fn next_after(&mut self, k: &K) -> Option<Self::Item> {
-        let index_incr = after_index!(self.keys[self.index..], k);
-        for _ in 0..index_incr {
-            self.iter_mut.next();
-        }
-        self.index += index_incr;
-        if self.index < self.keys.len() {
-            self.index += 1;
-            self.iter_mut.next()
-        } else {
-            None
-        }
-    }
-
-    fn next_from(&mut self, k: &K) -> Option<Self::Item> {
-        let index_incr = from_index!(self.keys[self.index..], k);
-        for _ in 0..index_incr {
-            self.iter_mut.next();
-        }
-        self.index += index_incr;
-        if self.index < self.keys.len() {
-            self.index += 1;
-            self.iter_mut.next()
-        } else {
-            None
-        }
     }
 }
 
