@@ -87,11 +87,6 @@ impl<K: Ord, V> OrderedMap<K, V> {
         MapIterMut::new(&self.keys, &mut self.values)
     }
 
-    pub fn iter_after(&self, key: &K) -> MapIter<K, V> {
-        let start = after_index![self.keys, key];
-        MapIter::new(&self.keys[start..], &self.values[start..])
-    }
-
     pub fn keys(&self) -> SetIter<K> {
         SetIter::new(&self.keys)
     }
