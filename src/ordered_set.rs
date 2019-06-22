@@ -85,13 +85,6 @@ impl<T: Ord> OrderedSet<T> {
         SetIter::new(&self.ordered_list)
     }
 
-    /// Return an iterator over the items in the set that occur after the
-    /// given item in the sorting order
-    pub fn iter_after(&self, item: &T) -> SetIter<T> {
-        let start = after_index!(self.ordered_list, item);
-        SetIter::new(&self.ordered_list[start..])
-    }
-
     // TODO: implement a more useful drain for OrderedSet
     pub fn drain(&mut self) -> Drain<T> {
         self.ordered_list.drain(..)
@@ -388,11 +381,11 @@ mod tests {
     #[test]
     fn iter_after_works() {
         let str_set: OrderedSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
-        for item in str_set.iter_after(&"jjj".to_string()) {
+        for item in str_set.iter().skip_after(&"jjj".to_string()) {
             assert!(item > &"jjj".to_string());
             assert!(TEST_STRS.contains(&item.as_str()));
         }
-        for item in str_set.iter_after(&"zzz".to_string()) {
+        for item in str_set.iter().skip_after(&"zzz".to_string()) {
             assert!(item > &"zzz".to_string());
             assert!(false);
         }
