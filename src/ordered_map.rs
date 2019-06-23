@@ -139,6 +139,76 @@ impl<K: Ord, V> OrderedMap<K, V> {
             Err(_) => None,
         }
     }
+
+    /// Iterate over the set union of the keys of this OrderedMap and
+    /// and the keys the given OrderedMap in the order defined their
+    /// elements Ord trait implementation.
+    pub fn keys_union<'a>(
+        &'a self,
+        other: &'a Self,
+    ) -> Union<'a, K, SetIter<'a, K>, SetIter<'a, K>> {
+        Union::new(self.keys(), other.keys())
+    }
+
+    /// Iterate over the set intersection of the keys of this OrderedMap and
+    /// and the keys the given OrderedMap in the order defined their
+    /// elements Ord trait implementation.
+    pub fn keys_intersection<'a>(
+        &'a self,
+        other: &'a Self,
+    ) -> Intersection<'a, K, SetIter<'a, K>, SetIter<'a, K>> {
+        Intersection::new(self.keys(), other.keys())
+    }
+
+    /// Iterate over the set difference of the keys of this OrderedMap and
+    /// and the keys the given OrderedMap in the order defined their
+    /// elements Ord trait implementation.
+    pub fn keys_difference<'a>(
+        &'a self,
+        other: &'a Self,
+    ) -> Difference<'a, K, SetIter<'a, K>, SetIter<'a, K>> {
+        Difference::new(self.keys(), other.keys())
+    }
+
+    /// Iterate over the set symmetric difference of the keys of this OrderedMap and
+    /// and the keys the given OrderedMap in the order defined their
+    /// elements Ord trait implementation.
+    pub fn keys_symmetric_difference<'a>(
+        &'a self,
+        other: &'a Self,
+    ) -> SymmetricDifference<'a, K, SetIter<'a, K>, SetIter<'a, K>> {
+        SymmetricDifference::new(self.keys(), other.keys())
+    }
+
+    /// Are the keys of the given OrderedMap disjoint from the keys of
+    /// this OrderedMapr?
+    pub fn is_keys_disjoint(&self, other: &Self) -> bool {
+        are_disjoint(self.keys(), other.keys())
+    }
+
+    /// Are the keys of the given OrderedMap a proper subset o the keys of
+    /// this OrderedMapr?
+    pub fn is_keys_proper_subset(&self, other: &Self) -> bool {
+        a_proper_superset_b(self.keys(), other.keys())
+    }
+
+    /// Are the keys of the given OrderedMap a proper superset o the keys of
+    /// this OrderedMapr?
+    pub fn is_keys_proper_superset(&self, other: &Self) -> bool {
+        a_proper_superset_b(other.keys(), self.keys())
+    }
+
+    /// Are the keys of the given OrderedMap subset of the keys of
+    /// this OrderedMapr?
+    pub fn is_keys_subset(&self, other: &Self) -> bool {
+        a_superset_b(self.keys(), other.keys())
+    }
+
+    /// Are the keys of the given OrderedMap superset of the keys of
+    /// this OrderedMapr?
+    pub fn is_keys_superset(&self, other: &Self) -> bool {
+        a_superset_b(other.keys(), self.keys())
+    }
 }
 
 /// Convert to OrderedMap<K, V> from a Vec<(K, V)>
