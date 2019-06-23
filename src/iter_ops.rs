@@ -451,6 +451,7 @@ where
 
 // Map Merge Iterator
 /// Ordered Iterator over the merged output of two disjoint map Iterators.
+// TODO: does this need to be so general i.e. limit to MapIter
 pub struct MapMergeIter<'a, K, V, L, R>
 where
     K: 'a + Ord,
@@ -518,6 +519,42 @@ where
                 return None;
             }
         }
+    }
+}
+
+impl<'a, K, V, L, R> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapMergeIter<'a, K, V, L, R>
+where
+    K: 'a + Ord,
+    V: 'a,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+{
+    fn skip_past(&mut self, k: &K) -> &mut Self {
+        if let Some(l_item) = self.l_item {
+            if l_item.0 <= k {
+                self.l_item = self.l_iter.skip_past(k).next();
+            }
+        }
+        if let Some(r_item) = self.r_item {
+            if r_item.0 <= k {
+                self.r_item = self.r_iter.skip_past(k).next();
+            }
+        }
+        self
+    }
+
+    fn skip_until(&mut self, k: &K) -> &mut Self {
+        if let Some(l_item) = self.l_item {
+            if l_item.0 < k {
+                self.l_item = self.l_iter.skip_until(k).next();
+            }
+        }
+        if let Some(r_item) = self.r_item {
+            if r_item.0 < k {
+                self.r_item = self.r_iter.skip_until(k).next();
+            }
+        }
+        self
     }
 }
 
