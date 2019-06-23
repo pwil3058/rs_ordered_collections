@@ -236,12 +236,12 @@ macro_rules! define_set_op_iterator {
         {
             fn skip_past(&mut self, t: &T) -> &mut Self {
                 if let Some(l_item) = self.l_item {
-                    if t <= l_item {
+                    if l_item <= t {
                         self.l_item = self.l_iter.skip_past(t).next();
                     }
                 }
                 if let Some(r_item) = self.r_item {
-                    if t <= r_item {
+                    if r_item <= t {
                         self.r_item = self.r_iter.skip_past(t).next();
                     }
                 }
@@ -250,12 +250,12 @@ macro_rules! define_set_op_iterator {
 
             fn skip_until(&mut self, t: &T) -> &mut Self {
                 if let Some(l_item) = self.l_item {
-                    if t < l_item {
+                    if l_item < t {
                         self.l_item = self.l_iter.skip_until(t).next();
                     }
                 }
                 if let Some(r_item) = self.r_item {
-                    if t < r_item {
+                    if r_item < t {
                         self.r_item = self.r_iter.skip_until(t).next();
                     }
                 }
@@ -724,6 +724,26 @@ mod tests {
             .symmetric_difference(SetIter::new(&LIST_1[..3]))
             .to_set();
         let vec: Vec<&str> = set.iter().cloned().collect();
+        assert_eq!(vec, vec!["c", "d", "e", "f"]);
+    }
+
+    #[test]
+    fn skip_past_works() {
+        let set = Union::new(SetIter::new(&LIST_0[0..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
+            .skip_past(&"c")
+            .to_set();
+        let vec: Vec<&str> = set.iter().to_list();
+        assert_eq!(vec, vec!["d", "e", "f"]);
+    }
+
+    #[test]
+    fn skip_until_works() {
+        let set = Union::new(SetIter::new(&LIST_0[0..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
+            .skip_until(&"c")
+            .to_set();
+        let vec: Vec<&str> = set.iter().to_list();
         assert_eq!(vec, vec!["c", "d", "e", "f"]);
     }
 }

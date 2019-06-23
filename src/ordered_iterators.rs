@@ -428,9 +428,17 @@ mod tests {
     }
 
     #[test]
+    fn skip_past_works() {
+        assert_eq!(SetIter::new(LIST).skip_past(&"g").next(), Some(&"i"));
+        assert_eq!(SetIter::new(LIST).skip_past(&"f").next(), Some(&"g"));
+        assert_eq!(SetIter::new(LIST).skip_past(&"g").to_set().len(), 3);
+    }
+
+    #[test]
     fn skip_until_works() {
         assert_eq!(SetIter::new(LIST).skip_until(&"g").next(), Some(&"g"));
         assert_eq!(SetIter::new(LIST).skip_until(&"f").next(), Some(&"g"));
+        assert_eq!(SetIter::new(LIST).skip_until(&"f").to_set().len(), 4);
     }
 
     #[test]
