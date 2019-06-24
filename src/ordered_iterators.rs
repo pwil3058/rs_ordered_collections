@@ -52,14 +52,20 @@ where
     }
 }
 
-pub trait ToMap<'a, K, V>
+pub trait ToMap<'a, K, V>: Iterator<Item = (&'a K, &'a V)>
 where
     K: 'a + Ord + Clone,
     V: 'a + Clone,
 {
     /// Create a OrderedSet<T> from the items in the Iterator's output
     fn to_map(&mut self) -> OrderedMap<K, V> {
-        OrderedMap::<K, V>::default()
+        let mut keys: Vec<K> = vec![];
+        let mut values: Vec<V> = vec![];
+        for (k, v) in self {
+            keys.push(k.clone());
+            values.push(v.clone());
+        }
+        OrderedMap::<K, V> { keys, values }
     }
 }
 
