@@ -95,7 +95,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
         ValueIter::new(&self.keys, &self.values)
     }
 
-    pub fn values_mut<'a>(&'a mut self) -> ValueIterMut<'a, K, V> {
+    pub fn values_mut(&mut self) -> ValueIterMut<'_, K, V> {
         ValueIterMut::new(&self.keys, &mut self.values)
     }
 

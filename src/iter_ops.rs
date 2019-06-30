@@ -288,34 +288,32 @@ where
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if let Some(l_item) = self.l_item {
-                if let Some(r_item) = self.r_item {
-                    match l_item.cmp(&r_item) {
-                        Ordering::Less => {
-                            self.l_item = self.l_iter.next();
-                            return Some(l_item);
-                        }
-                        Ordering::Greater => {
-                            self.r_item = self.r_iter.next();
-                            return Some(r_item);
-                        }
-                        Ordering::Equal => {
-                            self.l_item = self.l_iter.next();
-                            self.r_item = self.r_iter.next();
-                            return Some(l_item);
-                        }
+        if let Some(l_item) = self.l_item {
+            if let Some(r_item) = self.r_item {
+                match l_item.cmp(&r_item) {
+                    Ordering::Less => {
+                        self.l_item = self.l_iter.next();
+                        return Some(l_item);
                     }
-                } else {
-                    self.l_item = self.l_iter.next();
-                    return Some(l_item);
+                    Ordering::Greater => {
+                        self.r_item = self.r_iter.next();
+                        return Some(r_item);
+                    }
+                    Ordering::Equal => {
+                        self.l_item = self.l_iter.next();
+                        self.r_item = self.r_iter.next();
+                        return Some(l_item);
+                    }
                 }
-            } else if let Some(r_item) = self.r_item {
-                self.r_item = self.r_iter.next();
-                return Some(r_item);
             } else {
-                return None;
+                self.l_item = self.l_iter.next();
+                return Some(l_item);
             }
+        } else if let Some(r_item) = self.r_item {
+            self.r_item = self.r_iter.next();
+            return Some(r_item);
+        } else {
+            return None;
         }
     }
 }
@@ -475,8 +473,8 @@ where
         Self {
             l_item: l_iter.next(),
             r_item: r_iter.next(),
-            l_iter: l_iter,
-            r_iter: r_iter,
+            l_iter,
+            r_iter,
         }
     }
 }
