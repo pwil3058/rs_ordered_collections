@@ -72,26 +72,26 @@ impl<K: Ord, V> OrderedMap<K, V> {
     //    self.keys.drain(..)
     //}
 
-    pub fn iter(&self) -> MapIter<K, V> {
+    pub fn iter(&self) -> MapIter<'_, K, V> {
         MapIter::new(&self.keys, &self.values)
     }
 
     pub fn merge<'a>(
         &'a self,
         other: &'a Self,
-    ) -> MapMergeIter<'a, K, V, MapIter<K, V>, MapIter<K, V>> {
+    ) -> MapMergeIter<'a, K, V, MapIter<'_, K, V>, MapIter<'_, K, V>> {
         MapMergeIter::new(self.iter(), other.iter())
     }
 
-    pub fn iter_mut(&mut self) -> MapIterMut<K, V> {
+    pub fn iter_mut(&mut self) -> MapIterMut<'_, K, V> {
         MapIterMut::new(&self.keys, &mut self.values)
     }
 
-    pub fn keys(&self) -> SetIter<K> {
+    pub fn keys(&self) -> SetIter<'_, K> {
         SetIter::new(&self.keys)
     }
 
-    pub fn values(&self) -> ValueIter<K, V> {
+    pub fn values(&self) -> ValueIter<'_, K, V> {
         ValueIter::new(&self.keys, &self.values)
     }
 

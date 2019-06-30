@@ -454,8 +454,7 @@ where
 // TODO: does this need to be so general i.e. limit to MapIter
 pub struct MapMergeIter<'a, K, V, L, R>
 where
-    K: 'a + Ord,
-    V: 'a,
+    K: Ord,
     L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
     R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {

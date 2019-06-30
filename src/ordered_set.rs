@@ -16,7 +16,7 @@
 //! Useful for those situations when ordered iteration over a set's
 //! contents is a frequent requirement.
 
-extern crate rand;
+
 
 use std::convert::From;
 use std::default::Default;
@@ -81,12 +81,12 @@ impl<T: Ord> OrderedSet<T> {
         self.ordered_list.first()
     }
 
-    pub fn iter(&self) -> SetIter<T> {
+    pub fn iter(&self) -> SetIter<'_, T> {
         SetIter::new(&self.ordered_list)
     }
 
     // TODO: implement a more useful drain for OrderedSet
-    pub fn drain(&mut self) -> Drain<T> {
+    pub fn drain(&mut self) -> Drain<'_, T> {
         self.ordered_list.drain(..)
     }
 
@@ -259,7 +259,7 @@ macro_rules! define_set_map_operation {
             pub fn $function<'a, V>(
                 &'a self,
                 other: &'a OrderedMap<T, V>,
-            ) -> $iter<'a, T, SetIter<T>, SetIter<T>> {
+            ) -> $iter<'a, T, SetIter<'_, T>, SetIter<'_, T>> {
                 $iter::new(self.iter(), other.keys())
             }
         }

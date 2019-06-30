@@ -34,7 +34,7 @@ macro_rules! from_index {
     };
 }
 
-extern crate rand;
+
 
 pub mod iter_ops;
 pub mod ordered_iterators;

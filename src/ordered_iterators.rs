@@ -481,16 +481,25 @@ mod tests {
     fn value_iter_mut_works() {
         let vec: Vec<i32> = VALUES.iter().cloned().collect();
         let mut values: Vec<i32> = VALUES.iter().cloned().collect();
-        let set_iter = ValueIterMut::new(LIST, &mut values);
-        let result: Vec<i32> = set_iter.map(|x| *x).collect();
+        let result: Vec<i32> = ValueIterMut::new(LIST, &mut values).map(|x| *x).collect();
         assert_eq!(result, vec);
-        let mut set_iter = ValueIterMut::new(LIST, &mut values);
-        assert_eq!(set_iter.next_after(&"g"), Some(&mut 2_i32));
-        let result: Vec<i32> = set_iter.map(|x| *x).collect();
+        assert_eq!(
+            ValueIterMut::new(LIST, &mut values).next_after(&"g"),
+            Some(&mut 2_i32)
+        );
+        let result: Vec<i32> = ValueIterMut::new(LIST, &mut values)
+            .skip_past(&"i")
+            .map(|x| *x)
+            .collect();
         assert_eq!(result, vec[5..].to_vec());
-        let mut set_iter = ValueIterMut::new(LIST, &mut values);
-        assert_eq!(set_iter.next_from(&"g"), Some(&mut 3_i32));
-        let result: Vec<i32> = set_iter.map(|x| *x).collect();
+        assert_eq!(
+            ValueIterMut::new(LIST, &mut values).next_from(&"g"),
+            Some(&mut 3_i32)
+        );
+        let result: Vec<i32> = ValueIterMut::new(LIST, &mut values)
+            .skip_past(&"g")
+            .map(|x| *x)
+            .collect();
         assert_eq!(result, vec[4..].to_vec());
         for (i, value) in ValueIter::new(LIST, &values).enumerate() {
             assert!(*value != i as i32 || i == 3);
