@@ -2,24 +2,6 @@
 //! Useful for those situations when ordered iteration over a set's
 //! contents is a frequent requirement.
 
-macro_rules! after_index {
-    ( $list:expr, $target:expr ) => {
-        match $list.binary_search($target) {
-            Ok(index) => index + 1,
-            Err(index) => index,
-        }
-    };
-}
-
-macro_rules! from_index {
-    ( $list:expr, $target:expr ) => {
-        match $list.binary_search($target) {
-            Ok(index) => index,
-            Err(index) => index,
-        }
-    };
-}
-
 pub mod iter_ops;
 pub mod ordered_iterators;
 pub mod ordered_map;

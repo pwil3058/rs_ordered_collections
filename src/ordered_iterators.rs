@@ -1,3 +1,21 @@
+macro_rules! after_index {
+    ( $list:expr, $target:expr ) => {
+        match $list.binary_search($target) {
+            Ok(index) => index + 1,
+            Err(index) => index,
+        }
+    };
+}
+
+macro_rules! from_index {
+    ( $list:expr, $target:expr ) => {
+        match $list.binary_search($target) {
+            Ok(index) => index,
+            Err(index) => index,
+        }
+    };
+}
+
 use std::slice::IterMut;
 
 use crate::OrderedMap;
