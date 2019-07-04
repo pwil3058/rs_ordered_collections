@@ -1,5 +1,6 @@
 use std::convert::From;
 use std::default::Default;
+use std::ops::{Index, IndexMut};
 
 use crate::iter_ops::*;
 use crate::ordered_iterators::*;
@@ -225,6 +226,28 @@ impl<K: Ord + Clone, V: Clone> From<&[(K, V)]> for OrderedMap<K, V> {
         }
         assert!(map.is_valid());
         map
+    }
+}
+
+impl<K: Ord, V> Index<K> for OrderedMap<K, V> {
+    type Output = V;
+
+    fn index(&self, key: K) -> &Self::Output {
+        if let Ok(index) = self.keys.binary_search(&key) {
+            &self.values[index]
+        } else {
+            panic!("Unknown key")
+        }
+    }
+}
+
+impl<K: Ord, V> IndexMut<K> for OrderedMap<K, V> {
+    fn index_mut<'a>(&'a mut self, key: K) -> &'a mut Self::Output {
+        if let Ok(index) = self.keys.binary_search(&key) {
+            &mut self.values[index]
+        } else {
+            panic!("Unknown key")
+        }
     }
 }
 
