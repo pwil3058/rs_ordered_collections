@@ -126,6 +126,13 @@ impl<K: Ord, V> OrderedMap<K, V> {
         }
     }
 
+    pub fn remove_entry(&mut self, key: &K) -> Option<(K, V)> {
+        match self.keys.binary_search(&key) {
+            Ok(index) => Some((self.keys.remove(index), self.values.remove(index))),
+            Err(_) => None,
+        }
+    }
+
     /// Iterate over the set union of the keys of this OrderedMap and
     /// and the keys the given OrderedMap in the order defined their
     /// elements Ord trait implementation.
