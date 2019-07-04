@@ -105,9 +105,8 @@ impl<K: Ord, V> OrderedMap<K, V> {
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         match self.keys.binary_search(&key) {
             Ok(index) => {
-                let old = self.values.remove(index);
-                self.values.insert(index, value);
-                Some(old)
+                self.values.push(value);
+                Some(self.values.swap_remove(index))
             }
             Err(index) => {
                 self.keys.insert(index, key);
