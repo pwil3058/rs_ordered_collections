@@ -246,27 +246,22 @@ impl<'a, K: Ord, V: 'a> SkipAheadIterator<'a, K, &'a mut V> for ValueIterMut<'a,
 
 // Map Merge Iterator
 /// Ordered Iterator over the merged output of two disjoint map Iterators.
-// TODO: does this need to be so general i.e. limit to MapIter
-pub struct MapMergeIter<'a, K, V, L, R>
+pub struct MapMergeIter<'a, K, V>
 where
     K: Ord,
-    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
     l_item: Option<(&'a K, &'a V)>,
     r_item: Option<(&'a K, &'a V)>,
-    l_iter: L,
-    r_iter: R,
+    l_iter: MapIter<'a, K, V>,
+    r_iter: MapIter<'a, K, V>,
 }
 
-impl<'a, K, V, L, R> MapMergeIter<'a, K, V, L, R>
+impl<'a, K, V> MapMergeIter<'a, K, V>
 where
     K: 'a + Ord,
     V: 'a,
-    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
-    pub fn new(mut l_iter: L, mut r_iter: R) -> Self {
+    pub fn new(mut l_iter: MapIter<'a, K, V>, mut r_iter: MapIter<'a, K, V>) -> Self {
         Self {
             l_item: l_iter.next(),
             r_item: r_iter.next(),
@@ -276,12 +271,10 @@ where
     }
 }
 
-impl<'a, K, V, L, R> Iterator for MapMergeIter<'a, K, V, L, R>
+impl<'a, K, V> Iterator for MapMergeIter<'a, K, V>
 where
     K: 'a + Ord,
     V: 'a,
-    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
     type Item = (&'a K, &'a V);
 
@@ -316,12 +309,10 @@ where
     }
 }
 
-impl<'a, K, V, L, R> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapMergeIter<'a, K, V, L, R>
+impl<'a, K, V> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapMergeIter<'a, K, V>
 where
     K: 'a + Ord,
     V: 'a,
-    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
     fn skip_past(&mut self, k: &K) -> &mut Self {
         if let Some(l_item) = self.l_item {
@@ -352,12 +343,10 @@ where
     }
 }
 
-impl<'a, K, V, L, R> ToMap<'a, K, V> for MapMergeIter<'a, K, V, L, R>
+impl<'a, K, V> ToMap<'a, K, V> for MapMergeIter<'a, K, V>
 where
     K: 'a + Ord + Clone,
     V: 'a + Clone,
-    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
 }
 

@@ -7,8 +7,8 @@ use crate::iter_ops::*;
 
 pub mod ord_map_iterators;
 
-use self::ord_map_iterators::{
-    MapIter, MapIterMut, MapMergeIter, SetIter, ValueIter, ValueIterMut,
+pub use self::ord_map_iterators::{
+    MapIter, MapIterMut, MapMergeIter, SetIter, ToMap, ValueIter, ValueIterMut,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -73,10 +73,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
         MapIter::new(&self.keys, &self.values)
     }
 
-    pub fn merge<'a>(
-        &'a self,
-        other: &'a Self,
-    ) -> MapMergeIter<'a, K, V, MapIter<'_, K, V>, MapIter<'_, K, V>> {
+    pub fn merge<'a>(&'a self, other: &'a Self) -> MapMergeIter<'a, K, V> {
         MapMergeIter::new(self.iter(), other.iter())
     }
 
@@ -338,5 +335,22 @@ mod tests {
                 assert!(false);
             }
         }
+    }
+
+    #[test]
+    fn map_merge_basic() {
+        let map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[..5].into();
+        let map2: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[5..].into();
+        let merged = map1.merge(&map2).to_map();
+        assert_eq!(map1.len() + map2.len(), merged.len());
+        assert!(merged.is_valid());
+    }
+
+    #[test]
+    #[should_panic]
+    fn map_merge_overlap_panic() {
+        let map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[..5].into();
+        let map2: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[3..].into();
+        let _merged = map1.merge(&map2).to_map();
     }
 }
