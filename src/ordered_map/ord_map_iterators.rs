@@ -59,9 +59,14 @@ impl<'a, K: Ord, V> MapIter<'a, K, V> {
         }
     }
 
-    /// Exclude keys in the given from the output stream.
+    /// Exclude keys in the given key iterator from the output stream.
     pub fn except<I: SkipAheadIterator<'a, K, &'a K>>(self, iter: I) -> MapIterExcept<'a, K, V, I> {
         MapIterExcept::new(self, iter)
+    }
+
+    /// Exclude keys not in the given key iteratorn from the output stream.
+    pub fn only<I: SkipAheadIterator<'a, K, &'a K>>(self, iter: I) -> MapIterOnly<'a, K, V, I> {
+        MapIterOnly::new(self, iter)
     }
 }
 
@@ -94,31 +99,85 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapIte
 
 impl<'a, K: Ord + Clone, V: Clone> ToMap<'a, K, V> for MapIter<'a, K, V> {}
 
-pub struct MapIterExcept<'a, K, V, R>
-where
-    K: Ord,
-    R: SkipAheadIterator<'a, K, &'a K>,
-{
-    l_iter: MapIter<'a, K, V>,
-    r_iter: R,
-    l_item: Option<(&'a K, &'a V)>,
-    r_item: Option<&'a K>,
-}
-
-impl<'a, K, V, R> MapIterExcept<'a, K, V, R>
-where
-    K: Ord,
-    R: SkipAheadIterator<'a, K, &'a K>,
-{
-    pub(crate) fn new(mut l_iter: MapIter<'a, K, V>, mut r_iter: R) -> Self {
-        Self {
-            l_item: l_iter.next(),
-            r_item: r_iter.next(),
-            l_iter,
-            r_iter,
+macro_rules! define_mapiter_filter {
+    ( $doc:meta, $iter:ident, $left_iter:ident, $item:ty ) => {
+        #[$doc]
+        pub struct $iter<'a, K, V, R>
+        where
+            K: Ord,
+            R: SkipAheadIterator<'a, K, &'a K>,
+        {
+            l_iter: $left_iter<'a, K, V>,
+            r_iter: R,
+            l_item: Option<$item>,
+            r_item: Option<&'a K>,
         }
+
+        impl<'a, K, V, R> $iter<'a, K, V, R>
+        where
+            K: Ord,
+            R: SkipAheadIterator<'a, K, &'a K>,
+        {
+            pub(crate) fn new(mut l_iter: $left_iter<'a, K, V>, mut r_iter: R) -> Self {
+                Self {
+                    l_item: l_iter.next(),
+                    r_item: r_iter.next(),
+                    l_iter,
+                    r_iter,
+                }
+            }
+        }
+
+        impl<'a, K, V, R> SkipAheadIterator<'a, K, $item> for $iter<'a, K, V, R>
+        where
+            K: 'a + Ord,
+            R: SkipAheadIterator<'a, K, &'a K>,
+        {
+            fn skip_past(&mut self, key: &K) -> &mut Self {
+                if let Some(l_item) = self.l_item {
+                    if l_item.0 <= key {
+                        self.l_item = self.l_iter.skip_past(key).next();
+                    }
+                }
+                if let Some(r_item) = self.r_item {
+                    if r_item <= key {
+                        self.r_item = self.r_iter.skip_past(key).next();
+                    }
+                }
+                self
+            }
+
+            fn skip_until(&mut self, key: &K) -> &mut Self {
+                if let Some(l_item) = self.l_item {
+                    if l_item.0 < key {
+                        self.l_item = self.l_iter.skip_until(key).next();
+                    }
+                }
+                if let Some(r_item) = self.r_item {
+                    if r_item < key {
+                        self.r_item = self.r_iter.skip_until(key).next();
+                    }
+                }
+                self
+            }
+        }
+
+        impl<'a, K, V, I> ToMap<'a, K, V> for $iter<'a, K, V, I>
+        where
+            K: Ord + Clone,
+            V: Clone,
+            I: SkipAheadIterator<'a, K, &'a K>,
+        {}
     }
 }
+
+define_mapiter_filter!(
+    doc="Iterator over the contents of a MapIter excepting those whose
+    keys are in the provided key iterator.",
+    MapIterExcept,
+    MapIter,
+    (&'a K, &'a V)
+);
 
 impl<'a, K, V, R> Iterator for MapIterExcept<'a, K, V, R>
 where
@@ -155,12 +214,47 @@ where
     }
 }
 
-impl<'a, K, V, I> ToMap<'a, K, V> for MapIterExcept<'a, K, V, I>
+define_mapiter_filter!(
+    doc="Iterator over the contents of a MapIter excepting those whose
+    keys are not in the provided key iterator.",
+    MapIterOnly,
+    MapIter,
+    (&'a K, &'a V)
+);
+
+impl<'a, K, V, R> Iterator for MapIterOnly<'a, K, V, R>
 where
-    K: Ord + Clone,
-    V: Clone,
-    I: SkipAheadIterator<'a, K, &'a K>,
-{}
+    K: Ord,
+    R: SkipAheadIterator<'a, K, &'a K>,
+{
+    type Item = (&'a K, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(l_item) = self.l_item {
+                if let Some(r_item) = self.r_item {
+                    match l_item.0.cmp(&r_item) {
+                        Ordering::Less => {
+                            self.l_item = self.l_iter.next_from(&r_item);
+                        }
+                        Ordering::Greater => {
+                            self.r_item = self.r_iter.next_from(&l_item.0);
+                        }
+                        Ordering::Equal => {
+                            self.l_item = self.l_iter.next();
+                            self.r_item = self.r_iter.next();
+                            return Some(l_item);
+                        }
+                    }
+                } else {
+                    return None;
+                }
+            } else {
+                return None;
+            }
+        }
+    }
+}
 
 // MUT MAP ITERATOR
 
@@ -515,6 +609,16 @@ mod tests {
         assert_eq!(map.len(), 4);
         for s in &["e", "i", "k"] {
             assert!(!map.contains_key(&s));
+        }
+    }
+
+    #[test]
+    fn map_iter_only() {
+        let set_iter = SetIter::new(&["e", "i", "k"]);
+        let map = MapIter::new(LIST, VALUES).only(set_iter).to_map();
+        assert_eq!(map.len(), 3);
+        for s in &["e", "i", "k"] {
+            assert!(map.contains_key(&s));
         }
     }
 
