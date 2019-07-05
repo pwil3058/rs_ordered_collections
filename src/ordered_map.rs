@@ -1,11 +1,16 @@
 use std::convert::From;
 use std::default::Default;
 use std::ops::{Index, IndexMut};
+use std::vec;
 
 use crate::iter_ops::*;
 use crate::ordered_iterators::*;
 
-use crate::OrderedMap;
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct OrderedMap<K: Ord, V> {
+    pub(crate) keys: Vec<K>,
+    pub(crate) values: Vec<V>,
+}
 
 impl<K: Ord, V> Default for OrderedMap<K, V> {
     fn default() -> Self {

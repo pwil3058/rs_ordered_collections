@@ -12,7 +12,11 @@ pub use crate::iter_ops::*;
 pub use crate::ordered_iterators::*;
 use crate::OrderedMap;
 
-use crate::OrderedSet;
+/// An set of items of type T ordered according to Ord (with no duplicates)
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct OrderedSet<T: Ord> {
+    pub(crate) ordered_list: Vec<T>,
+}
 
 impl<T: Ord> OrderedSet<T> {
     pub fn new() -> Self {
