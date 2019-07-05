@@ -79,9 +79,7 @@ impl<'a, K: Ord, V> Entry<'a, K, V> {
 impl<'a, K: Ord, V: Default> Entry<'a, K, V> {
     pub fn or_default(self) -> &'a mut V {
         match self {
-            Entry::Occupied(entry) => {
-                entry.into_mut()
-            }
+            Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => entry.insert(V::default()),
         }
     }

@@ -11,6 +11,7 @@ use std::vec::Drain;
 pub use crate::iter_ops::*;
 pub use crate::ordered_iterators::*;
 use crate::OrderedMap;
+use crate::SkipAheadIterator;
 
 /// An set of items of type T ordered according to Ord (with no duplicates)
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]

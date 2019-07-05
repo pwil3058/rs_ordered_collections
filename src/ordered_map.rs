@@ -4,7 +4,12 @@ use std::ops::{Index, IndexMut};
 use std::vec;
 
 use crate::iter_ops::*;
-use crate::ordered_iterators::*;
+
+pub mod ord_map_iterators;
+
+use self::ord_map_iterators::{
+    MapIter, MapIterMut, MapMergeIter, SetIter, ValueIter, ValueIterMut,
+};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct OrderedMap<K: Ord, V> {

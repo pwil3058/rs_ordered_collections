@@ -5,6 +5,8 @@ use std::cmp::Ordering;
 
 use crate::ordered_iterators::*;
 
+use crate::SkipAheadIterator;
+
 pub trait IterSetOperations<'a, T>: SkipAheadIterator<'a, T, &'a T> + Sized
 where
     T: 'a + Ord,
@@ -431,132 +433,6 @@ where
             }
         }
     }
-}
-
-// Map Merge Iterator
-/// Ordered Iterator over the merged output of two disjoint map Iterators.
-// TODO: does this need to be so general i.e. limit to MapIter
-pub struct MapMergeIter<'a, K, V, L, R>
-where
-    K: Ord,
-    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-{
-    l_item: Option<(&'a K, &'a V)>,
-    r_item: Option<(&'a K, &'a V)>,
-    l_iter: L,
-    r_iter: R,
-}
-
-impl<'a, K, V, L, R> MapMergeIter<'a, K, V, L, R>
-where
-    K: 'a + Ord,
-    V: 'a,
-    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-{
-    pub fn new(mut l_iter: L, mut r_iter: R) -> Self {
-        Self {
-            l_item: l_iter.next(),
-            r_item: r_iter.next(),
-            l_iter,
-            r_iter,
-        }
-    }
-}
-
-impl<'a, K, V, L, R> Iterator for MapMergeIter<'a, K, V, L, R>
-where
-    K: 'a + Ord,
-    V: 'a,
-    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-{
-    type Item = (&'a K, &'a V);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if let Some(l_item) = self.l_item {
-                if let Some(r_item) = self.r_item {
-                    match l_item.0.cmp(&r_item.0) {
-                        Ordering::Less => {
-                            self.l_item = self.l_iter.next();
-                            return Some(l_item);
-                        }
-                        Ordering::Greater => {
-                            self.r_item = self.r_iter.next();
-                            return Some(r_item);
-                        }
-                        Ordering::Equal => {
-                            panic!("merged map Iterators are not disjoint");
-                        }
-                    }
-                } else {
-                    self.l_item = self.l_iter.next();
-                    return Some(l_item);
-                }
-            } else if let Some(r_item) = self.r_item {
-                self.r_item = self.r_iter.next();
-                return Some(r_item);
-            } else {
-                return None;
-            }
-        }
-    }
-}
-
-impl<'a, K, V, L, R> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapMergeIter<'a, K, V, L, R>
-where
-    K: 'a + Ord,
-    V: 'a,
-    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-{
-    fn skip_past(&mut self, k: &K) -> &mut Self {
-        if let Some(l_item) = self.l_item {
-            if l_item.0 <= k {
-                self.l_item = self.l_iter.skip_past(k).next();
-            }
-        }
-        if let Some(r_item) = self.r_item {
-            if r_item.0 <= k {
-                self.r_item = self.r_iter.skip_past(k).next();
-            }
-        }
-        self
-    }
-
-    fn skip_until(&mut self, k: &K) -> &mut Self {
-        if let Some(l_item) = self.l_item {
-            if l_item.0 < k {
-                self.l_item = self.l_iter.skip_until(k).next();
-            }
-        }
-        if let Some(r_item) = self.r_item {
-            if r_item.0 < k {
-                self.r_item = self.r_iter.skip_until(k).next();
-            }
-        }
-        self
-    }
-}
-
-impl<'a, K, V, L, R> ToTupleList<'a, K, V> for MapMergeIter<'a, K, V, L, R>
-where
-    K: 'a + Ord + Clone,
-    V: 'a + Clone,
-    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-{
-}
-
-impl<'a, K, V, L, R> ToMap<'a, K, V> for MapMergeIter<'a, K, V, L, R>
-where
-    K: 'a + Ord + Clone,
-    V: 'a + Clone,
-    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-{
 }
 
 #[cfg(test)]
