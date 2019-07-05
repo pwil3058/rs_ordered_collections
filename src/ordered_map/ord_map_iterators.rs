@@ -58,6 +58,11 @@ impl<'a, K: Ord, V> MapIter<'a, K, V> {
             index: 0,
         }
     }
+
+    /// Exclude keys in the given from the output stream.
+    pub fn except<I: SkipAheadIterator<'a, K, &'a K>>(self, iter: I) -> MapIterExcept<'a, K, V, I> {
+        MapIterExcept::new(self, iter)
+    }
 }
 
 impl<'a, K: Ord, V> Iterator for MapIter<'a, K, V> {
@@ -88,6 +93,74 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapIte
 }
 
 impl<'a, K: Ord + Clone, V: Clone> ToMap<'a, K, V> for MapIter<'a, K, V> {}
+
+pub struct MapIterExcept<'a, K, V, R>
+where
+    K: Ord,
+    R: SkipAheadIterator<'a, K, &'a K>,
+{
+    l_iter: MapIter<'a, K, V>,
+    r_iter: R,
+    l_item: Option<(&'a K, &'a V)>,
+    r_item: Option<&'a K>,
+}
+
+impl<'a, K, V, R> MapIterExcept<'a, K, V, R>
+where
+    K: Ord,
+    R: SkipAheadIterator<'a, K, &'a K>,
+{
+    pub(crate) fn new(mut l_iter: MapIter<'a, K, V>, mut r_iter: R) -> Self {
+        Self {
+            l_item: l_iter.next(),
+            r_item: r_iter.next(),
+            l_iter,
+            r_iter,
+        }
+    }
+}
+
+impl<'a, K, V, R> Iterator for MapIterExcept<'a, K, V, R>
+where
+    K: Ord,
+    R: SkipAheadIterator<'a, K, &'a K>,
+{
+    type Item = (&'a K, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(l_item) = self.l_item {
+                if let Some(r_item) = self.r_item {
+                    match l_item.0.cmp(&r_item) {
+                        Ordering::Less => {
+                            self.l_item = self.l_iter.next();
+                            return Some(l_item);
+                        }
+                        Ordering::Greater => {
+                            self.r_item = self.r_iter.next_from(&l_item.0);
+                        }
+                        Ordering::Equal => {
+                            self.l_item = self.l_iter.next();
+                            self.r_item = self.r_iter.next();
+                        }
+                    }
+                } else {
+                    self.l_item = self.l_iter.next();
+                    return Some(l_item);
+                }
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+impl<'a, K, V, I> ToMap<'a, K, V> for MapIterExcept<'a, K, V, I>
+where
+    K: Ord + Clone,
+    V: Clone,
+    I: SkipAheadIterator<'a, K, &'a K>,
+{}
 
 // MUT MAP ITERATOR
 
@@ -422,17 +495,27 @@ mod tests {
     #[test]
     fn map_iter_works() {
         let vec = MAP.to_vec();
-        let set_iter = MapIter::new(LIST, VALUES);
-        let result: Vec<(&str, i32)> = set_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
+        let map_iter = MapIter::new(LIST, VALUES);
+        let result: Vec<(&str, i32)> = map_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec);
-        let mut set_iter = MapIter::new(LIST, VALUES);
-        assert_eq!(set_iter.next_after(&"g"), Some((&"i", &2)));
-        let result: Vec<(&str, i32)> = set_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
+        let mut map_iter = MapIter::new(LIST, VALUES);
+        assert_eq!(map_iter.next_after(&"g"), Some((&"i", &2)));
+        let result: Vec<(&str, i32)> = map_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec[5..].to_vec());
-        let mut set_iter = MapIter::new(LIST, VALUES);
-        assert_eq!(set_iter.next_from(&"g"), Some((&"g", &3)));
-        let result: Vec<(&str, i32)> = set_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
+        let mut map_iter = MapIter::new(LIST, VALUES);
+        assert_eq!(map_iter.next_from(&"g"), Some((&"g", &3)));
+        let result: Vec<(&str, i32)> = map_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec[4..].to_vec());
+    }
+
+    #[test]
+    fn map_iter_except() {
+        let set_iter = SetIter::new(&["e", "i", "k"]);
+        let map = MapIter::new(LIST, VALUES).except(set_iter).to_map();
+        assert_eq!(map.len(), 4);
+        for s in &["e", "i", "k"] {
+            assert!(!map.contains_key(&s));
+        }
     }
 
     #[test]
