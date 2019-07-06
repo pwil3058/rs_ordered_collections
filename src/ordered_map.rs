@@ -8,7 +8,7 @@ use crate::iter_ops::*;
 pub mod ord_map_iterators;
 
 pub use self::ord_map_iterators::{
-    MapIter, MapIterMut, MapMergeIter, SetIter, ToMap, ValueIter, ValueIterMut,
+    MapIter, MapIterFilter, MapIterMut, MapMergeIter, SetIter, ToMap, ValueIter, ValueIterMut,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -343,6 +343,24 @@ mod tests {
         let map2: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[5..].into();
         let merged = map1.merge(&map2).to_map();
         assert_eq!(map1.len() + map2.len(), merged.len());
+        assert!(merged.is_valid());
+    }
+
+    #[test]
+    fn map_merge_except() {
+        let map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[..5].into();
+        let map2: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[5..].into();
+        let merged = map1.merge(&map2).except(SetIter::new(&["bbb", "lll", "mmm"])).to_map();
+        assert_eq!(map1.len() + map2.len(), merged.len() + 3);
+        assert!(merged.is_valid());
+    }
+
+    #[test]
+    fn map_merge_only() {
+        let map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[..5].into();
+        let map2: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[5..].into();
+        let merged = map1.merge(&map2).only(SetIter::new(&["bbb", "lll", "mmm"])).to_map();
+        assert_eq!(3, merged.len());
         assert!(merged.is_valid());
     }
 
