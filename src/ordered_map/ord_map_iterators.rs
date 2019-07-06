@@ -332,14 +332,14 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for Ma
 }
 
 macro_rules! define_mapitermut_filter {
-    ( $doc:meta, $iter:ident, $left_iter:ident, $item:ty ) => {
+    ( $doc:meta, $iter:ident ) => {
         #[$doc]
         pub struct $iter<'a, K, V, R>
         where
             K: Ord,
             R: SkipAheadIterator<'a, K, &'a K>,
         {
-            l_iter: $left_iter<'a, K, V>,
+            l_iter: MapIterMut<'a, K, V>,
             r_iter: R,
             r_key: Option<&'a K>,
         }
@@ -349,7 +349,7 @@ macro_rules! define_mapitermut_filter {
             K: Ord,
             R: SkipAheadIterator<'a, K, &'a K>,
         {
-            pub(crate) fn new(l_iter: $left_iter<'a, K, V>, mut r_iter: R) -> Self {
+            pub(crate) fn new(l_iter: MapIterMut<'a, K, V>, mut r_iter: R) -> Self {
                 Self {
                     r_key: r_iter.next(),
                     l_iter,
@@ -358,7 +358,7 @@ macro_rules! define_mapitermut_filter {
             }
         }
 
-        impl<'a, K, V, R> SkipAheadIterator<'a, K, $item> for $iter<'a, K, V, R>
+        impl<'a, K, V, R> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for $iter<'a, K, V, R>
         where
             K: 'a + Ord,
             R: SkipAheadIterator<'a, K, &'a K>,
@@ -389,9 +389,7 @@ macro_rules! define_mapitermut_filter {
 define_mapitermut_filter!(
     doc="Iterator over the contents of a MapIterMut excepting those whose
     keys are in the provided key iterator.",
-    MapIterMutExcept,
-    MapIterMut,
-    (&'a K, &'a mut V)
+    MapIterMutExcept
 );
 
 impl<'a, K, V, R> Iterator for MapIterMutExcept<'a, K, V, R>
@@ -433,9 +431,7 @@ where
 define_mapitermut_filter!(
     doc="Iterator over the contents of a MapIterMut excepting those whose
     keys are not in the provided key iterator.",
-    MapIterMutOnly,
-    MapIterMut,
-    (&'a K, &'a mut V)
+    MapIterMutOnly
 );
 
 impl<'a, K, V, R> Iterator for MapIterMutOnly<'a, K, V, R>
