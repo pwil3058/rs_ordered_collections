@@ -134,7 +134,7 @@ macro_rules! define_mapiter_filter {
             R: SkipAheadIterator<'a, K, &'a K>,
         {
             fn skip_past(&mut self, key: &K) -> &mut Self {
-                if let Some(l_item) = self.l_item {
+                if let Some(l_item) = &self.l_item {
                     if l_item.0 <= key {
                         self.l_item = self.l_iter.skip_past(key).next();
                     }
@@ -148,7 +148,7 @@ macro_rules! define_mapiter_filter {
             }
 
             fn skip_until(&mut self, key: &K) -> &mut Self {
-                if let Some(l_item) = self.l_item {
+                if let Some(l_item) = &self.l_item {
                     if l_item.0 < key {
                         self.l_item = self.l_iter.skip_until(key).next();
                     }
@@ -162,11 +162,11 @@ macro_rules! define_mapiter_filter {
             }
         }
 
-        impl<'a, K, V, I> ToMap<'a, K, V> for $iter<'a, K, V, I>
+        impl<'a, K, V, R> ToMap<'a, K, V> for $iter<'a, K, V, R>
         where
             K: Ord + Clone,
             V: Clone,
-            I: SkipAheadIterator<'a, K, &'a K>,
+            R: SkipAheadIterator<'a, K, &'a K>,
         {}
     }
 }
@@ -274,6 +274,20 @@ impl<'a, K: 'a + Ord, V: 'a> MapIterMut<'a, K, V> {
             index: 0,
         }
     }
+
+    fn key(&self) -> Option<&'a K> {
+        self.keys.get(self.index)
+    }
+
+    /// Exclude keys in the given key iterator from the output stream.
+    pub fn except<I: SkipAheadIterator<'a, K, &'a K>>(self, iter: I) -> MapIterMutExcept<'a, K, V, I> {
+        MapIterMutExcept::new(self, iter)
+    }
+
+    /// Exclude keys not in the given key iteratorn from the output stream.
+    pub fn only<I: SkipAheadIterator<'a, K, &'a K>>(self, iter: I) -> MapIterMutOnly<'a, K, V, I> {
+        MapIterMutOnly::new(self, iter)
+    }
 }
 
 impl<'a, K: Ord, V> Iterator for MapIterMut<'a, K, V> {
@@ -308,6 +322,147 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for Ma
         }
         self.index += index_incr;
         self
+    }
+}
+
+macro_rules! define_mapitermut_filter {
+    ( $doc:meta, $iter:ident, $left_iter:ident, $item:ty ) => {
+        #[$doc]
+        pub struct $iter<'a, K, V, R>
+        where
+            K: Ord,
+            R: SkipAheadIterator<'a, K, &'a K>,
+        {
+            l_iter: $left_iter<'a, K, V>,
+            r_iter: R,
+            r_key: Option<&'a K>,
+        }
+
+        impl<'a, K, V, R> $iter<'a, K, V, R>
+        where
+            K: Ord,
+            R: SkipAheadIterator<'a, K, &'a K>,
+        {
+            pub(crate) fn new(l_iter: $left_iter<'a, K, V>, mut r_iter: R) -> Self {
+                Self {
+                    r_key: r_iter.next(),
+                    l_iter,
+                    r_iter,
+                }
+            }
+        }
+
+        impl<'a, K, V, R> SkipAheadIterator<'a, K, $item> for $iter<'a, K, V, R>
+        where
+            K: 'a + Ord,
+            R: SkipAheadIterator<'a, K, &'a K>,
+        {
+            fn skip_past(&mut self, key: &K) -> &mut Self {
+                self.l_iter.skip_past(key);
+                if let Some(r_key) = self.r_key {
+                    if r_key <= key {
+                        self.r_key = self.r_iter.skip_until(key).next();
+                    }
+                }
+                self
+            }
+
+            fn skip_until(&mut self, key: &K) -> &mut Self {
+                self.l_iter.skip_until(key);
+                if let Some(r_key) = self.r_key {
+                    if r_key < key {
+                        self.r_key = self.r_iter.skip_until(key).next();
+                    }
+                }
+                self
+            }
+        }
+    }
+}
+
+define_mapitermut_filter!(
+    doc="Iterator over the contents of a MapIterMut excepting those whose
+    keys are in the provided key iterator.",
+    MapIterMutExcept,
+    MapIterMut,
+    (&'a K, &'a mut V)
+);
+
+impl<'a, K, V, R> Iterator for MapIterMutExcept<'a, K, V, R>
+where
+    K: Ord,
+    R: SkipAheadIterator<'a, K, &'a K>,
+{
+    type Item = (&'a K, &'a mut V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(l_key) = self.l_iter.key() {
+                if let Some(r_key) = self.r_key {
+                    match l_key.cmp(&r_key) {
+                        Ordering::Less => {
+                            self.l_iter.index += 1;
+                            return Some((l_key, self.l_iter.iter_mut.next().unwrap()));
+                        }
+                        Ordering::Greater => {
+                            self.r_key = self.r_iter.next_from(&l_key);
+                        }
+                        Ordering::Equal => {
+                            self.l_iter.index += 1;
+                            self.l_iter.iter_mut.next();
+                            self.r_key = self.r_iter.next();
+                        }
+                    }
+                } else {
+                    self.l_iter.index += 1;
+                    return Some((l_key, self.l_iter.iter_mut.next().unwrap()));
+                }
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+define_mapitermut_filter!(
+    doc="Iterator over the contents of a MapIterMut excepting those whose
+    keys are not in the provided key iterator.",
+    MapIterMutOnly,
+    MapIterMut,
+    (&'a K, &'a mut V)
+);
+
+impl<'a, K, V, R> Iterator for MapIterMutOnly<'a, K, V, R>
+where
+    K: Ord,
+    R: SkipAheadIterator<'a, K, &'a K>,
+{
+    type Item = (&'a K, &'a mut V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(l_key) = self.l_iter.key() {
+                if let Some(r_key) = self.r_key {
+                    match l_key.cmp(&r_key) {
+                        Ordering::Less => {
+                            self.l_iter.skip_until(&r_key);
+                        }
+                        Ordering::Greater => {
+                            self.r_key = self.r_iter.next_from(&l_key);
+                        }
+                        Ordering::Equal => {
+                            self.r_key = self.r_iter.next();
+                            self.l_iter.index += 1;
+                            return Some((l_key, self.l_iter.iter_mut.next().unwrap()));
+                        }
+                    }
+                } else {
+                    return None;
+                }
+            } else {
+                return None;
+            }
+        }
     }
 }
 
@@ -619,6 +774,42 @@ mod tests {
         assert_eq!(map.len(), 3);
         for s in &["e", "i", "k"] {
             assert!(map.contains_key(&s));
+        }
+    }
+
+    #[test]
+    fn map_iter_mut_except() {
+        let ref_map = MapIter::new(LIST, VALUES).to_map();
+        let mut map = MapIter::new(LIST, VALUES).to_map();
+        let set_iter = SetIter::new(&["e", "i", "k"]);
+        for (_, value) in map.iter_mut().except(set_iter) {
+            *value += 10;
+        }
+        for ((ref_key, ref_value), (key, value)) in ref_map.iter().zip(map.iter()) {
+            assert_eq!(ref_key, key);
+            if ["e", "i", "k"].contains(key) {
+                assert_eq!(*ref_value, *value);
+            } else {
+                assert_eq!(*ref_value + 10, *value);
+            }
+        }
+    }
+
+    #[test]
+    fn map_iter_mut_only() {
+        let ref_map = MapIter::new(LIST, VALUES).to_map();
+        let mut map = MapIter::new(LIST, VALUES).to_map();
+        let set_iter = SetIter::new(&["e", "i", "k"]);
+        for (_, value) in map.iter_mut().only(set_iter) {
+            *value += 10;
+        }
+        for ((ref_key, ref_value), (key, value)) in ref_map.iter().zip(map.iter()) {
+            assert_eq!(ref_key, key);
+            if ["e", "i", "k"].contains(key) {
+                assert_eq!(*ref_value + 10, *value);
+            } else {
+                assert_eq!(*ref_value, *value);
+            }
         }
     }
 
