@@ -91,9 +91,21 @@ impl<'a, K: Ord + Clone, V: Clone> ToMap<'a, K, V> for MapIter<'a, K, V> {}
 
 impl<'a, K: Ord, V> MapIterFilter<'a, K, V> for MapIter<'a, K, V> {}
 
-pub trait MapIterFilter<'a, K: 'a + Ord, V: 'a>: SkipAheadIterator<'a, K, (&'a K, &'a V)> + Sized {
+impl<'a, K, V> MapIterMerge<'a, K, V> for MapIter<'a, K, V>
+where
+    K: 'a + Ord + Clone,
+    V: 'a,
+{
+}
+
+pub trait MapIterFilter<'a, K: 'a + Ord, V: 'a>:
+    SkipAheadIterator<'a, K, (&'a K, &'a V)> + Sized
+{
     /// Exclude keys in the given key iterator from the output stream.
-    fn except<I: SkipAheadIterator<'a, K, &'a K>>(self, iter: I) -> MapIterExcept<'a, K, V, Self, I> {
+    fn except<I: SkipAheadIterator<'a, K, &'a K>>(
+        self,
+        iter: I,
+    ) -> MapIterExcept<'a, K, V, Self, I> {
         MapIterExcept::new(self, iter)
     }
 
@@ -175,12 +187,13 @@ macro_rules! define_mapiter_filter {
             V: Clone,
             L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
             R: SkipAheadIterator<'a, K, &'a K>,
-        {}
-    }
+        {
+        }
+    };
 }
 
 define_mapiter_filter!(
-    doc="Iterator over the contents of a MapIter excepting those whose
+    doc = "Iterator over the contents of a MapIter excepting those whose
     keys are in the provided key iterator.",
     MapIterExcept
 );
@@ -221,8 +234,17 @@ where
     }
 }
 
+impl<'a, K, V, L, R> MapIterMerge<'a, K, V> for MapIterExcept<'a, K, V, L, R>
+where
+    K: 'a + Ord + Clone,
+    V: 'a + Clone,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, &'a K>,
+{
+}
+
 define_mapiter_filter!(
-    doc="Iterator over the contents of a MapIter excepting those whose
+    doc = "Iterator over the contents of a MapIter excepting those whose
     keys are not in the provided key iterator.",
     MapIterOnly
 );
@@ -262,6 +284,15 @@ where
     }
 }
 
+impl<'a, K, V, L, R> MapIterMerge<'a, K, V> for MapIterOnly<'a, K, V, L, R>
+where
+    K: 'a + Ord + Clone,
+    V: 'a + Clone,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, &'a K>,
+{
+}
+
 // MUT MAP ITERATOR
 
 /// An Iterator over the keys and mutable values in an ordered map in key order
@@ -281,12 +312,15 @@ impl<'a, K: 'a + Ord, V: 'a> MapIterMut<'a, K, V> {
         }
     }
 
-    fn key(&self) -> Option<&'a K> {
+    fn peek_key(&self) -> Option<&'a K> {
         self.keys.get(self.index)
     }
 
     /// Exclude keys in the given key iterator from the output stream.
-    pub fn except<I: SkipAheadIterator<'a, K, &'a K>>(self, iter: I) -> MapIterMutExcept<'a, K, V, I> {
+    pub fn except<I: SkipAheadIterator<'a, K, &'a K>>(
+        self,
+        iter: I,
+    ) -> MapIterMutExcept<'a, K, V, I> {
         MapIterMutExcept::new(self, iter)
     }
 
@@ -383,11 +417,11 @@ macro_rules! define_mapitermut_filter {
                 self
             }
         }
-    }
+    };
 }
 
 define_mapitermut_filter!(
-    doc="Iterator over the contents of a MapIterMut excepting those whose
+    doc = "Iterator over the contents of a MapIterMut excepting those whose
     keys are in the provided key iterator.",
     MapIterMutExcept
 );
@@ -401,7 +435,7 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_key) = self.l_iter.key() {
+            if let Some(l_key) = self.l_iter.peek_key() {
                 if let Some(r_key) = self.r_key {
                     match l_key.cmp(&r_key) {
                         Ordering::Less => {
@@ -429,7 +463,7 @@ where
 }
 
 define_mapitermut_filter!(
-    doc="Iterator over the contents of a MapIterMut excepting those whose
+    doc = "Iterator over the contents of a MapIterMut excepting those whose
     keys are not in the provided key iterator.",
     MapIterMutOnly
 );
@@ -443,7 +477,7 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_key) = self.l_iter.key() {
+            if let Some(l_key) = self.l_iter.peek_key() {
                 if let Some(r_key) = self.r_key {
                     match l_key.cmp(&r_key) {
                         Ordering::Less => {
@@ -570,22 +604,39 @@ impl<'a, K: Ord, V: 'a> SkipAheadIterator<'a, K, &'a mut V> for ValueIterMut<'a,
 
 // Map Merge Iterator
 /// Ordered Iterator over the merged output of two disjoint map Iterators.
-pub struct MapMergeIter<'a, K, V>
+pub struct MapMergeIter<'a, K, V, L, R>
 where
     K: Ord,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
     l_item: Option<(&'a K, &'a V)>,
     r_item: Option<(&'a K, &'a V)>,
-    l_iter: MapIter<'a, K, V>,
-    r_iter: MapIter<'a, K, V>,
+    l_iter: L,
+    r_iter: R,
 }
 
-impl<'a, K, V> MapMergeIter<'a, K, V>
+pub trait MapIterMerge<'a, K, V>: SkipAheadIterator<'a, K, (&'a K, &'a V)> + Sized
 where
     K: 'a + Ord,
     V: 'a,
 {
-    pub fn new(mut l_iter: MapIter<'a, K, V>, mut r_iter: MapIter<'a, K, V>) -> Self {
+    fn merge<I: SkipAheadIterator<'a, K, (&'a K, &'a V)>>(
+        self,
+        other: I,
+    ) -> MapMergeIter<'a, K, V, Self, I> {
+        MapMergeIter::new(self, other)
+    }
+}
+
+impl<'a, K, V, L, R> MapMergeIter<'a, K, V, L, R>
+where
+    K: 'a + Ord,
+    V: 'a,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+{
+    pub fn new(mut l_iter: L, mut r_iter: R) -> Self {
         Self {
             l_item: l_iter.next(),
             r_item: r_iter.next(),
@@ -595,10 +646,12 @@ where
     }
 }
 
-impl<'a, K, V> Iterator for MapMergeIter<'a, K, V>
+impl<'a, K, V, L, R> Iterator for MapMergeIter<'a, K, V, L, R>
 where
     K: 'a + Ord,
     V: 'a,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
     type Item = (&'a K, &'a V);
 
@@ -633,10 +686,12 @@ where
     }
 }
 
-impl<'a, K, V> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapMergeIter<'a, K, V>
+impl<'a, K, V, L, R> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapMergeIter<'a, K, V, L, R>
 where
     K: 'a + Ord,
     V: 'a,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
     fn skip_past(&mut self, k: &K) -> &mut Self {
         if let Some(l_item) = self.l_item {
@@ -667,14 +722,32 @@ where
     }
 }
 
-impl<'a, K, V> ToMap<'a, K, V> for MapMergeIter<'a, K, V>
+impl<'a, K, V, L, R> ToMap<'a, K, V> for MapMergeIter<'a, K, V, L, R>
 where
     K: 'a + Ord + Clone,
     V: 'a + Clone,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
 }
 
-impl<'a, K: Ord, V> MapIterFilter<'a, K, V> for MapMergeIter<'a, K, V> {}
+impl<'a, K, V, L, R> MapIterFilter<'a, K, V> for MapMergeIter<'a, K, V, L, R>
+where
+    K: 'a + Ord + Clone,
+    V: 'a + Clone,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+{
+}
+
+impl<'a, K, V, L, R> MapIterMerge<'a, K, V> for MapMergeIter<'a, K, V, L, R>
+where
+    K: 'a + Ord + Clone,
+    V: 'a + Clone,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+{
+}
 
 #[cfg(test)]
 mod tests {
@@ -682,6 +755,10 @@ mod tests {
 
     static LIST: &[&str] = &["a", "c", "e", "g", "i", "k", "m"];
     static VALUES: &[i32] = &[6, 5, 4, 3, 2, 1, 0];
+    static LIST_1: &[&str] = &["b", "f", "l", "n", "o", "s", "z"];
+    static VALUES_1: &[i32] = &[16, 15, 14, 13, 12, 11, 10];
+    static LIST_2: &[&str] = &["d", "h", "j", "p", "t", "u", "y"];
+    static VALUES_2: &[i32] = &[116, 115, 114, 113, 112, 111, 110];
     static MAP: &[(&str, i32)] = &[
         ("a", 6),
         ("c", 5),
@@ -759,6 +836,22 @@ mod tests {
         assert_eq!(map_iter.next_from(&"g"), Some((&"g", &3)));
         let result: Vec<(&str, i32)> = map_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec[4..].to_vec());
+    }
+
+    #[test]
+    fn map_iter_merge() {
+        let map_iter_0 = MapIter::new(LIST, VALUES);
+        let map_iter_1 = MapIter::new(LIST_1, VALUES_1);
+        let map_iter_2 = MapIter::new(LIST_2, VALUES_2);
+        let map = map_iter_0.merge(map_iter_1).merge(map_iter_2).to_map();
+        assert!(map.is_valid());
+        assert_eq!(LIST.len() + LIST_1.len() + LIST_2.len(), map.len());
+        let map_iter_0 = MapIter::new(LIST, VALUES);
+        let map_iter_1 = MapIter::new(LIST_1, VALUES_1);
+        let map_iter_2 = MapIter::new(LIST_2, VALUES_2);
+        let map = map_iter_0.merge(map_iter_1.merge(map_iter_2)).to_map();
+        assert!(map.is_valid());
+        assert_eq!(LIST.len() + LIST_1.len() + LIST_2.len(), map.len());
     }
 
     #[test]

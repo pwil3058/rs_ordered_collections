@@ -73,7 +73,10 @@ impl<K: Ord, V> OrderedMap<K, V> {
         MapIter::new(&self.keys, &self.values)
     }
 
-    pub fn merge<'a>(&'a self, other: &'a Self) -> MapMergeIter<'a, K, V> {
+    pub fn merge<'a>(
+        &'a self,
+        other: &'a Self,
+    ) -> MapMergeIter<'a, K, V, MapIter<K, V>, MapIter<K, V>> {
         MapMergeIter::new(self.iter(), other.iter())
     }
 
@@ -350,7 +353,10 @@ mod tests {
     fn map_merge_except() {
         let map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[..5].into();
         let map2: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[5..].into();
-        let merged = map1.merge(&map2).except(SetIter::new(&["bbb", "lll", "mmm"])).to_map();
+        let merged = map1
+            .merge(&map2)
+            .except(SetIter::new(&["bbb", "lll", "mmm"]))
+            .to_map();
         assert_eq!(map1.len() + map2.len(), merged.len() + 3);
         assert!(merged.is_valid());
     }
@@ -359,7 +365,10 @@ mod tests {
     fn map_merge_only() {
         let map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[..5].into();
         let map2: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[5..].into();
-        let merged = map1.merge(&map2).only(SetIter::new(&["bbb", "lll", "mmm"])).to_map();
+        let merged = map1
+            .merge(&map2)
+            .only(SetIter::new(&["bbb", "lll", "mmm"]))
+            .to_map();
         assert_eq!(3, merged.len());
         assert!(merged.is_valid());
     }
