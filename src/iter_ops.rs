@@ -80,18 +80,15 @@ where
     L: SkipAheadIterator<'a, T, &'a T>,
     R: SkipAheadIterator<'a, T, &'a T>,
 {
-    let mut o_l_item = l_iter.next();
-    let mut o_r_item = r_iter.next();
-
     loop {
-        if let Some(l_item) = o_l_item {
-            if let Some(r_item) = o_r_item {
+        if let Some(l_item) = l_iter.peek() {
+            if let Some(r_item) = r_iter.peek() {
                 match l_item.cmp(&r_item) {
                     Ordering::Less => {
-                        o_l_item = l_iter.next_from(r_item);
+                        l_iter.skip_until(r_item);
                     }
                     Ordering::Greater => {
-                        o_r_item = r_iter.next_from(l_item);
+                        r_iter.skip_until(l_item);
                     }
                     Ordering::Equal => {
                         return false;
@@ -113,21 +110,18 @@ where
     A: SkipAheadIterator<'a, T, &'a T>,
     B: SkipAheadIterator<'a, T, &'a T>,
 {
-    let mut o_a_item = a_iter.next();
-    let mut o_b_item = b_iter.next();
-
-    while let Some(b_item) = o_b_item {
-        if let Some(a_item) = o_a_item {
+    while let Some(b_item) = b_iter.peek() {
+        if let Some(a_item) = a_iter.peek() {
             match b_item.cmp(&a_item) {
                 Ordering::Less => {
                     return false;
                 }
                 Ordering::Greater => {
-                    o_a_item = a_iter.next_from(b_item);
+                    a_iter.skip_until(b_item);
                 }
                 Ordering::Equal => {
-                    o_b_item = b_iter.next();
-                    o_a_item = a_iter.next();
+                    b_iter.next();
+                    a_iter.next();
                 }
             }
         } else {
@@ -144,23 +138,20 @@ where
     A: SkipAheadIterator<'a, T, &'a T>,
     B: SkipAheadIterator<'a, T, &'a T>,
 {
-    let mut o_a_item = a_iter.next();
-    let mut o_b_item = b_iter.next();
-
     let mut result = false;
-    while let Some(b_item) = o_b_item {
-        if let Some(a_item) = o_a_item {
+    while let Some(b_item) = b_iter.peek() {
+        if let Some(a_item) = a_iter.peek() {
             match b_item.cmp(&a_item) {
                 Ordering::Less => {
                     return false;
                 }
                 Ordering::Greater => {
                     result = true;
-                    o_a_item = a_iter.next_from(b_item);
+                    a_iter.skip_until(b_item);
                 }
                 Ordering::Equal => {
-                    o_b_item = b_iter.next();
-                    o_a_item = a_iter.next();
+                    b_iter.next();
+                    a_iter.next();
                 }
             }
         } else {

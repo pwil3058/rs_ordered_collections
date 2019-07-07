@@ -139,10 +139,10 @@ mod tests {
         let vec = LIST.to_vec();
         assert_eq!(SetIter::new(LIST).to_list(), vec);
         let mut set_iter = SetIter::new(LIST);
-        assert_eq!(set_iter.next_after(&"g"), Some(&"i"));
+        assert_eq!(set_iter.skip_past(&"g").next(), Some(&"i"));
         assert_eq!(set_iter.to_list(), vec[5..].to_vec());
         let mut set_iter = SetIter::new(LIST);
-        assert_eq!(set_iter.next_from(&"g"), Some(&"g"));
+        assert_eq!(set_iter.skip_until(&"g").next(), Some(&"g"));
         assert_eq!(set_iter.to_list(), vec[4..].to_vec());
     }
 

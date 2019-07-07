@@ -880,30 +880,6 @@ mod tests {
     ];
 
     #[test]
-    fn map_next_after_works() {
-        assert_eq!(
-            MapIter::new(LIST, VALUES).next_after(&"g"),
-            Some((&"i", &2))
-        );
-        assert_eq!(
-            MapIter::new(LIST, VALUES).next_after(&"a"),
-            Some((&"c", &5))
-        );
-        let mut iter = MapIter::new(LIST, VALUES);
-        assert_eq!(iter.next_after(&"k"), Some((&"m", &0)));
-        assert_eq!(iter.next_after(&"k"), None);
-    }
-
-    #[test]
-    fn map_next_from_works() {
-        assert_eq!(MapIter::new(LIST, VALUES).next_from(&"g"), Some((&"g", &3)));
-        assert_eq!(MapIter::new(LIST, VALUES).next_from(&"a"), Some((&"a", &6)));
-        let mut iter = MapIter::new(LIST, VALUES);
-        assert_eq!(iter.next_from(&"m"), Some((&"m", &0)));
-        assert_eq!(iter.next_from(&"m"), None);
-    }
-
-    #[test]
     fn skip_past_works() {
         assert_eq!(
             MapIter::new(LIST, VALUES).skip_past(&"g").next(),
@@ -939,11 +915,11 @@ mod tests {
         let result: Vec<(&str, i32)> = map_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec);
         let mut map_iter = MapIter::new(LIST, VALUES);
-        assert_eq!(map_iter.next_after(&"g"), Some((&"i", &2)));
+        assert_eq!(map_iter.skip_past(&"g").next(), Some((&"i", &2)));
         let result: Vec<(&str, i32)> = map_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec[5..].to_vec());
         let mut map_iter = MapIter::new(LIST, VALUES);
-        assert_eq!(map_iter.next_from(&"g"), Some((&"g", &3)));
+        assert_eq!(map_iter.skip_until(&"g").next(), Some((&"g", &3)));
         let result: Vec<(&str, i32)> = map_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec[4..].to_vec());
     }
@@ -1041,7 +1017,7 @@ mod tests {
         let result: Vec<i32> = ValueIterMut::new(LIST, &mut values).map(|x| *x).collect();
         assert_eq!(result, vec);
         assert_eq!(
-            ValueIterMut::new(LIST, &mut values).next_after(&"g"),
+            ValueIterMut::new(LIST, &mut values).skip_past(&"g").next(),
             Some(&mut 2_i32)
         );
         let result: Vec<i32> = ValueIterMut::new(LIST, &mut values)
@@ -1050,7 +1026,7 @@ mod tests {
             .collect();
         assert_eq!(result, vec[5..].to_vec());
         assert_eq!(
-            ValueIterMut::new(LIST, &mut values).next_from(&"g"),
+            ValueIterMut::new(LIST, &mut values).skip_until(&"g").next(),
             Some(&mut 3_i32)
         );
         let result: Vec<i32> = ValueIterMut::new(LIST, &mut values)
@@ -1075,11 +1051,11 @@ mod tests {
         let values: Vec<i32> = ValueIter::new(LIST, VALUES).cloned().collect();
         assert_eq!(values, vec);
         let mut value_iter = ValueIter::new(LIST, VALUES);
-        assert_eq!(value_iter.next_after(&"g"), Some(&2_i32));
+        assert_eq!(value_iter.skip_past(&"g").next(), Some(&2_i32));
         let values: Vec<i32> = value_iter.cloned().collect();
         assert_eq!(values, vec[5..].to_vec());
         let mut value_iter = ValueIter::new(LIST, VALUES);
-        assert_eq!(value_iter.next_from(&"g"), Some(&3_i32));
+        assert_eq!(value_iter.skip_until(&"g").next(), Some(&3_i32));
         let values: Vec<i32> = value_iter.cloned().collect();
         assert_eq!(values, vec[4..].to_vec());
     }
