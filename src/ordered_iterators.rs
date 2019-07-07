@@ -104,6 +104,10 @@ impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T, &'a T> for SetIter<'a, T> {
         self.index += from_index!(self.ordered_list[self.index..], t);
         self
     }
+
+    fn peek(&mut self) -> Option<&'a T> {
+        self.ordered_list.get(self.index)
+    }
 }
 
 impl<'a, T: Ord + Clone> ToList<'a, T> for SetIter<'a, T> {}

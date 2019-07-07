@@ -17,6 +17,7 @@ macro_rules! from_index {
 }
 
 use std::cmp::Ordering;
+use std::marker::PhantomData;
 use std::slice::IterMut;
 
 use crate::OrderedMap;
@@ -85,6 +86,10 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapIte
         self.index += from_index!(self.keys[self.index..], k);
         self
     }
+
+    fn peek(&mut self) -> Option<&'a K> {
+        self.keys.get(self.index)
+    }
 }
 
 impl<'a, K: Ord + Clone, V: Clone> ToMap<'a, K, V> for MapIter<'a, K, V> {}
@@ -126,8 +131,7 @@ macro_rules! define_mapiter_filter {
         {
             l_iter: L,
             r_iter: R,
-            l_item: Option<(&'a K, &'a V)>,
-            r_item: Option<&'a K>,
+            phantom: PhantomData<(&'a K, &'a V)>,
         }
 
         impl<'a, K, V, L, R> $iter<'a, K, V, L, R>
@@ -136,48 +140,12 @@ macro_rules! define_mapiter_filter {
             L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
             R: SkipAheadIterator<'a, K, &'a K>,
         {
-            pub(crate) fn new(mut l_iter: L, mut r_iter: R) -> Self {
+            pub(crate) fn new(l_iter: L, r_iter: R) -> Self {
                 Self {
-                    l_item: l_iter.next(),
-                    r_item: r_iter.next(),
                     l_iter,
                     r_iter,
+                    phantom: PhantomData,
                 }
-            }
-        }
-
-        impl<'a, K, V, L, R> SkipAheadIterator<'a, K, (&'a K, &'a V)> for $iter<'a, K, V, L, R>
-        where
-            K: 'a + Ord,
-            L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
-            R: SkipAheadIterator<'a, K, &'a K>,
-        {
-            fn skip_past(&mut self, key: &K) -> &mut Self {
-                if let Some(l_item) = &self.l_item {
-                    if l_item.0 <= key {
-                        self.l_item = self.l_iter.skip_past(key).next();
-                    }
-                }
-                if let Some(r_item) = self.r_item {
-                    if r_item <= key {
-                        self.r_item = self.r_iter.skip_past(key).next();
-                    }
-                }
-                self
-            }
-
-            fn skip_until(&mut self, key: &K) -> &mut Self {
-                if let Some(l_item) = &self.l_item {
-                    if l_item.0 < key {
-                        self.l_item = self.l_iter.skip_until(key).next();
-                    }
-                }
-                if let Some(r_item) = self.r_item {
-                    if r_item < key {
-                        self.r_item = self.r_iter.skip_until(key).next();
-                    }
-                }
-                self
             }
         }
 
@@ -208,24 +176,66 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_item {
-                if let Some(r_item) = self.r_item {
-                    match l_item.0.cmp(&r_item) {
+            if let Some(l_key) = self.l_iter.peek() {
+                if let Some(r_key) = self.r_iter.peek() {
+                    match l_key.cmp(&r_key) {
                         Ordering::Less => {
-                            self.l_item = self.l_iter.next();
-                            return Some(l_item);
+                            return self.l_iter.next();
                         }
                         Ordering::Greater => {
-                            self.r_item = self.r_iter.next_from(&l_item.0);
+                            self.r_iter.skip_until(&l_key);
                         }
                         Ordering::Equal => {
-                            self.l_item = self.l_iter.next();
-                            self.r_item = self.r_iter.next();
+                            self.l_iter.next();
+                            self.r_iter.next();
                         }
                     }
                 } else {
-                    self.l_item = self.l_iter.next();
-                    return Some(l_item);
+                    return self.l_iter.next();
+                }
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+impl<'a, K, V, L, R> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapIterExcept<'a, K, V, L, R>
+where
+    K: 'a + Ord,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, &'a K>,
+{
+    fn skip_past(&mut self, key: &K) -> &mut Self {
+        self.l_iter.skip_past(key);
+        self.r_iter.skip_past(key);
+        self
+    }
+
+    fn skip_until(&mut self, key: &K) -> &mut Self {
+        self.l_iter.skip_until(key);
+        self.r_iter.skip_until(key);
+        self
+    }
+
+    fn peek(&mut self) -> Option<&'a K> {
+        loop {
+            if let Some(l_key) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
+                    match l_key.cmp(&r_item) {
+                        Ordering::Less => {
+                            return Some(l_key);
+                        }
+                        Ordering::Greater => {
+                            self.r_iter.skip_until(&l_key);
+                        }
+                        Ordering::Equal => {
+                            self.l_iter.next();
+                            self.r_iter.next();
+                        }
+                    }
+                } else {
+                    return Some(l_key);
                 }
             } else {
                 return None;
@@ -259,19 +269,61 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_item {
-                if let Some(r_item) = self.r_item {
-                    match l_item.0.cmp(&r_item) {
+            if let Some(l_key) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
+                    match l_key.cmp(&r_item) {
                         Ordering::Less => {
-                            self.l_item = self.l_iter.next_from(&r_item);
+                            self.l_iter.skip_until(&r_item);
                         }
                         Ordering::Greater => {
-                            self.r_item = self.r_iter.next_from(&l_item.0);
+                            self.r_iter.skip_until(&l_key);
                         }
                         Ordering::Equal => {
-                            self.l_item = self.l_iter.next();
-                            self.r_item = self.r_iter.next();
-                            return Some(l_item);
+                            self.r_iter.next();
+                            return self.l_iter.next();
+                        }
+                    }
+                } else {
+                    return None;
+                }
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+impl<'a, K, V, L, R> SkipAheadIterator<'a, K, (&'a K, &'a V)> for MapIterOnly<'a, K, V, L, R>
+where
+    K: 'a + Ord,
+    L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadIterator<'a, K, &'a K>,
+{
+    fn skip_past(&mut self, key: &K) -> &mut Self {
+        self.l_iter.skip_past(key);
+        self.r_iter.skip_past(key);
+        self
+    }
+
+    fn skip_until(&mut self, key: &K) -> &mut Self {
+        self.l_iter.skip_until(key);
+        self.r_iter.skip_until(key);
+        self
+    }
+
+    fn peek(&mut self) -> Option<&'a K> {
+        loop {
+            if let Some(l_key) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
+                    match l_key.cmp(&r_item) {
+                        Ordering::Less => {
+                            self.l_iter.skip_until(&r_item);
+                        }
+                        Ordering::Greater => {
+                            self.r_iter.skip_until(&l_key);
+                        }
+                        Ordering::Equal => {
+                            return Some(l_key);
                         }
                     }
                 } else {
@@ -310,10 +362,6 @@ impl<'a, K: 'a + Ord, V: 'a> MapIterMut<'a, K, V> {
             keys,
             index: 0,
         }
-    }
-
-    fn peek_key(&self) -> Option<&'a K> {
-        self.keys.get(self.index)
     }
 
     /// Exclude keys in the given key iterator from the output stream.
@@ -363,6 +411,10 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for Ma
         self.index += index_incr;
         self
     }
+
+    fn peek(&mut self) -> Option<&'a K> {
+        self.keys.get(self.index)
+    }
 }
 
 macro_rules! define_mapitermut_filter {
@@ -375,7 +427,6 @@ macro_rules! define_mapitermut_filter {
         {
             l_iter: MapIterMut<'a, K, V>,
             r_iter: R,
-            r_key: Option<&'a K>,
         }
 
         impl<'a, K, V, R> $iter<'a, K, V, R>
@@ -383,38 +434,8 @@ macro_rules! define_mapitermut_filter {
             K: Ord,
             R: SkipAheadIterator<'a, K, &'a K>,
         {
-            pub(crate) fn new(l_iter: MapIterMut<'a, K, V>, mut r_iter: R) -> Self {
-                Self {
-                    r_key: r_iter.next(),
-                    l_iter,
-                    r_iter,
-                }
-            }
-        }
-
-        impl<'a, K, V, R> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for $iter<'a, K, V, R>
-        where
-            K: 'a + Ord,
-            R: SkipAheadIterator<'a, K, &'a K>,
-        {
-            fn skip_past(&mut self, key: &K) -> &mut Self {
-                self.l_iter.skip_past(key);
-                if let Some(r_key) = self.r_key {
-                    if r_key <= key {
-                        self.r_key = self.r_iter.skip_until(key).next();
-                    }
-                }
-                self
-            }
-
-            fn skip_until(&mut self, key: &K) -> &mut Self {
-                self.l_iter.skip_until(key);
-                if let Some(r_key) = self.r_key {
-                    if r_key < key {
-                        self.r_key = self.r_iter.skip_until(key).next();
-                    }
-                }
-                self
+            pub(crate) fn new(l_iter: MapIterMut<'a, K, V>, r_iter: R) -> Self {
+                Self { l_iter, r_iter }
             }
         }
     };
@@ -435,25 +456,69 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_key) = self.l_iter.peek_key() {
-                if let Some(r_key) = self.r_key {
-                    match l_key.cmp(&r_key) {
+            if let Some(l_key) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
+                    match l_key.cmp(&r_item) {
                         Ordering::Less => {
                             self.l_iter.index += 1;
                             return Some((l_key, self.l_iter.iter_mut.next().unwrap()));
                         }
                         Ordering::Greater => {
-                            self.r_key = self.r_iter.next_from(&l_key);
+                            self.r_iter.skip_until(&l_key);
                         }
                         Ordering::Equal => {
                             self.l_iter.index += 1;
                             self.l_iter.iter_mut.next();
-                            self.r_key = self.r_iter.next();
+                            self.r_iter.next();
                         }
                     }
                 } else {
                     self.l_iter.index += 1;
                     return Some((l_key, self.l_iter.iter_mut.next().unwrap()));
+                }
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+impl<'a, K, V, R> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for MapIterMutExcept<'a, K, V, R>
+where
+    K: 'a + Ord,
+    R: SkipAheadIterator<'a, K, &'a K>,
+{
+    fn skip_past(&mut self, key: &K) -> &mut Self {
+        self.l_iter.skip_past(key);
+        self.r_iter.skip_past(key);
+        self
+    }
+
+    fn skip_until(&mut self, key: &K) -> &mut Self {
+        self.l_iter.skip_until(key);
+        self.r_iter.skip_until(key);
+        self
+    }
+
+    fn peek(&mut self) -> Option<&'a K> {
+        loop {
+            if let Some(l_key) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
+                    match l_key.cmp(&r_item) {
+                        Ordering::Less => {
+                            return Some(l_key);
+                        }
+                        Ordering::Greater => {
+                            self.r_iter.skip_until(&l_key);
+                        }
+                        Ordering::Equal => {
+                            self.l_iter.index += 1;
+                            self.l_iter.iter_mut.next();
+                            self.r_iter.next();
+                        }
+                    }
+                } else {
+                    return Some(l_key);
                 }
             } else {
                 return None;
@@ -477,19 +542,61 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_key) = self.l_iter.peek_key() {
-                if let Some(r_key) = self.r_key {
-                    match l_key.cmp(&r_key) {
+            if let Some(l_key) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
+                    match l_key.cmp(&r_item) {
                         Ordering::Less => {
-                            self.l_iter.skip_until(&r_key);
+                            self.l_iter.skip_until(&r_item);
                         }
                         Ordering::Greater => {
-                            self.r_key = self.r_iter.next_from(&l_key);
+                            self.r_iter.skip_until(&l_key);
                         }
                         Ordering::Equal => {
-                            self.r_key = self.r_iter.next();
+                            self.r_iter.next();
                             self.l_iter.index += 1;
                             return Some((l_key, self.l_iter.iter_mut.next().unwrap()));
+                        }
+                    }
+                } else {
+                    return None;
+                }
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+impl<'a, K, V, R> SkipAheadIterator<'a, K, (&'a K, &'a mut V)> for MapIterMutOnly<'a, K, V, R>
+where
+    K: 'a + Ord,
+    R: SkipAheadIterator<'a, K, &'a K>,
+{
+    fn skip_past(&mut self, key: &K) -> &mut Self {
+        self.l_iter.skip_past(key);
+        self.r_iter.skip_past(key);
+        self
+    }
+
+    fn skip_until(&mut self, key: &K) -> &mut Self {
+        self.l_iter.skip_until(key);
+        self.r_iter.skip_until(key);
+        self
+    }
+
+    fn peek(&mut self) -> Option<&'a K> {
+        loop {
+            if let Some(l_key) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
+                    match l_key.cmp(&r_item) {
+                        Ordering::Less => {
+                            self.l_iter.skip_until(&r_item);
+                        }
+                        Ordering::Greater => {
+                            self.r_iter.skip_until(&l_key);
+                        }
+                        Ordering::Equal => {
+                            return Some(l_key);
                         }
                     }
                 } else {
@@ -543,6 +650,10 @@ impl<'a, K: Ord, V> SkipAheadIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
     fn skip_until(&mut self, k: &K) -> &mut Self {
         self.index += from_index!(self.keys[self.index..], k);
         self
+    }
+
+    fn peek(&mut self) -> Option<&'a K> {
+        self.keys.get(self.index)
     }
 }
 
@@ -600,6 +711,10 @@ impl<'a, K: Ord, V: 'a> SkipAheadIterator<'a, K, &'a mut V> for ValueIterMut<'a,
         self.index += index_incr;
         self
     }
+
+    fn peek(&mut self) -> Option<&'a K> {
+        self.keys.get(self.index)
+    }
 }
 
 // Map Merge Iterator
@@ -610,10 +725,9 @@ where
     L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
     R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
-    l_item: Option<(&'a K, &'a V)>,
-    r_item: Option<(&'a K, &'a V)>,
     l_iter: L,
     r_iter: R,
+    phantom: PhantomData<(&'a K, &'a V)>,
 }
 
 pub trait MapIterMerge<'a, K, V>: SkipAheadIterator<'a, K, (&'a K, &'a V)> + Sized
@@ -636,12 +750,11 @@ where
     L: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
     R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
-    pub fn new(mut l_iter: L, mut r_iter: R) -> Self {
+    pub fn new(l_iter: L, r_iter: R) -> Self {
         Self {
-            l_item: l_iter.next(),
-            r_item: r_iter.next(),
             l_iter,
             r_iter,
+            phantom: PhantomData,
         }
     }
 }
@@ -657,30 +770,24 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_item {
-                if let Some(r_item) = self.r_item {
-                    match l_item.0.cmp(&r_item.0) {
+            if let Some(l_key) = self.l_iter.peek() {
+                if let Some(r_key) = self.r_iter.peek() {
+                    match l_key.cmp(&r_key) {
                         Ordering::Less => {
-                            self.l_item = self.l_iter.next();
-                            return Some(l_item);
+                            return self.l_iter.next();
                         }
                         Ordering::Greater => {
-                            self.r_item = self.r_iter.next();
-                            return Some(r_item);
+                            return self.r_iter.next();
                         }
                         Ordering::Equal => {
                             panic!("merged map Iterators are not disjoint");
                         }
                     }
                 } else {
-                    self.l_item = self.l_iter.next();
-                    return Some(l_item);
+                    return self.l_iter.next();
                 }
-            } else if let Some(r_item) = self.r_item {
-                self.r_item = self.r_iter.next();
-                return Some(r_item);
             } else {
-                return None;
+                return self.r_iter.next();
             }
         }
     }
@@ -694,31 +801,34 @@ where
     R: SkipAheadIterator<'a, K, (&'a K, &'a V)>,
 {
     fn skip_past(&mut self, k: &K) -> &mut Self {
-        if let Some(l_item) = self.l_item {
-            if l_item.0 <= k {
-                self.l_item = self.l_iter.skip_past(k).next();
-            }
-        }
-        if let Some(r_item) = self.r_item {
-            if r_item.0 <= k {
-                self.r_item = self.r_iter.skip_past(k).next();
-            }
-        }
+        self.l_iter.skip_past(k);
+        self.r_iter.skip_past(k);
         self
     }
 
     fn skip_until(&mut self, k: &K) -> &mut Self {
-        if let Some(l_item) = self.l_item {
-            if l_item.0 < k {
-                self.l_item = self.l_iter.skip_until(k).next();
-            }
-        }
-        if let Some(r_item) = self.r_item {
-            if r_item.0 < k {
-                self.r_item = self.r_iter.skip_until(k).next();
-            }
-        }
+        self.l_iter.skip_until(k);
+        self.r_iter.skip_until(k);
         self
+    }
+
+    fn peek(&mut self) -> Option<&'a K> {
+        if let Some(l_key) = self.l_iter.peek() {
+            if let Some(r_key) = self.r_iter.peek() {
+                match l_key.cmp(&r_key) {
+                    Ordering::Less | Ordering::Equal => {
+                        return Some(l_key);
+                    }
+                    Ordering::Greater => {
+                        return Some(r_key);
+                    }
+                }
+            } else {
+                return Some(l_key);
+            }
+        } else {
+            return self.r_iter.peek();
+        }
     }
 }
 

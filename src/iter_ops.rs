@@ -2,6 +2,7 @@
 ///! various filters. If the Iterators contain no duplicates as well
 ///! as being sorted then the filter will produce set operations.
 use std::cmp::Ordering;
+use std::marker::PhantomData;
 
 use crate::ordered_iterators::*;
 
@@ -178,10 +179,9 @@ macro_rules! define_set_op_iterator {
             L: SkipAheadIterator<'a, T, &'a T>,
             R: SkipAheadIterator<'a, T, &'a T>,
         {
-            l_item: Option<&'a T>,
-            r_item: Option<&'a T>,
             l_iter: L,
             r_iter: R,
+            phantom: PhantomData<&'a T>
         }
 
         impl<'a, T, L, R> $iter<'a, T, L, R>
@@ -190,12 +190,11 @@ macro_rules! define_set_op_iterator {
             L: SkipAheadIterator<'a, T, &'a T>,
             R: SkipAheadIterator<'a, T, &'a T>,
         {
-            pub fn new(mut l_iter: L, mut r_iter: R) -> Self {
+            pub fn new(l_iter: L, r_iter: R) -> Self {
                 Self {
-                    l_item: l_iter.next(),
-                    r_item: r_iter.next(),
                     l_iter: l_iter,
                     r_iter: r_iter,
+                    phantom: PhantomData,
                 }
             }
         }
@@ -214,41 +213,6 @@ macro_rules! define_set_op_iterator {
             L: SkipAheadIterator<'a, T, &'a T>,
             R: SkipAheadIterator<'a, T, &'a T>,
         {
-        }
-
-        impl<'a, T, L, R> SkipAheadIterator<'a, T, &'a T> for $iter<'a, T, L, R>
-        where
-            T: 'a + Ord,
-            L: SkipAheadIterator<'a, T, &'a T>,
-            R: SkipAheadIterator<'a, T, &'a T>,
-        {
-            fn skip_past(&mut self, t: &T) -> &mut Self {
-                if let Some(l_item) = self.l_item {
-                    if l_item <= t {
-                        self.l_item = self.l_iter.skip_past(t).next();
-                    }
-                }
-                if let Some(r_item) = self.r_item {
-                    if r_item <= t {
-                        self.r_item = self.r_iter.skip_past(t).next();
-                    }
-                }
-                self
-            }
-
-            fn skip_until(&mut self, t: &T) -> &mut Self {
-                if let Some(l_item) = self.l_item {
-                    if l_item < t {
-                        self.l_item = self.l_iter.skip_until(t).next();
-                    }
-                }
-                if let Some(r_item) = self.r_item {
-                    if r_item < t {
-                        self.r_item = self.r_iter.skip_until(t).next();
-                    }
-                }
-                self
-            }
         }
 
         impl<'a, T, L, R> IterSetOperations<'a, T> for $iter<'a, T, L, R>
@@ -276,33 +240,64 @@ where
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(l_item) = self.l_item {
-            if let Some(r_item) = self.r_item {
+        if let Some(l_item) = self.l_iter.peek() {
+            if let Some(r_item) = self.r_iter.peek() {
                 match l_item.cmp(&r_item) {
                     Ordering::Less => {
-                        self.l_item = self.l_iter.next();
-                        return Some(l_item);
+                        return self.l_iter.next();
                     }
                     Ordering::Greater => {
-                        self.r_item = self.r_iter.next();
-                        return Some(r_item);
+                        return self.r_iter.next();
                     }
                     Ordering::Equal => {
-                        self.l_item = self.l_iter.next();
-                        self.r_item = self.r_iter.next();
-                        return Some(l_item);
+                        self.r_iter.next();
+                        return self.l_iter.next();
                     }
                 }
             } else {
-                self.l_item = self.l_iter.next();
+                return self.l_iter.next();
+            }
+        } else {
+            return self.r_iter.next();
+        }
+    }
+}
+
+impl<'a, T, L, R> SkipAheadIterator<'a, T, &'a T> for Union<'a, T, L, R>
+where
+    T: 'a + Ord,
+    L: SkipAheadIterator<'a, T, &'a T>,
+    R: SkipAheadIterator<'a, T, &'a T>,
+{
+    fn peek(&mut self) -> Option<&'a T> {
+        if let Some(l_item) = self.l_iter.peek() {
+            if let Some(r_item) = self.r_iter.peek() {
+                match l_item.cmp(&r_item) {
+                    Ordering::Less | Ordering::Equal => {
+                        return Some(l_item);
+                    }
+                    Ordering::Greater => {
+                        return Some(r_item);
+                    }
+                }
+            } else {
                 return Some(l_item);
             }
-        } else if let Some(r_item) = self.r_item {
-            self.r_item = self.r_iter.next();
-            return Some(r_item);
         } else {
-            return None;
+            return self.r_iter.peek();
         }
+    }
+
+    fn skip_past(&mut self, t: &T) -> &mut Self {
+        self.l_iter.skip_past(t);
+        self.r_iter.skip_past(t);
+        self
+    }
+
+    fn skip_until(&mut self, t: &T) -> &mut Self {
+        self.l_iter.skip_until(t);
+        self.r_iter.skip_until(t);
+        self
     }
 }
 
@@ -322,18 +317,48 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_item {
-                if let Some(r_item) = self.r_item {
+            if let Some(l_item) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
                     match l_item.cmp(&r_item) {
                         Ordering::Less => {
-                            self.l_item = self.l_iter.next_from(&r_item);
+                            self.l_iter.skip_until(&r_item);
                         }
                         Ordering::Greater => {
-                            self.r_item = self.r_iter.next_from(&l_item);
+                            self.r_iter.skip_until(&l_item);
                         }
                         Ordering::Equal => {
-                            self.l_item = self.l_iter.next();
-                            self.r_item = self.r_iter.next();
+                            self.r_iter.next();
+                            return self.l_iter.next();
+                        }
+                    }
+                } else {
+                    return None;
+                }
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+impl<'a, T, L, R> SkipAheadIterator<'a, T, &'a T> for Intersection<'a, T, L, R>
+where
+    T: 'a + Ord,
+    L: SkipAheadIterator<'a, T, &'a T>,
+    R: SkipAheadIterator<'a, T, &'a T>,
+{
+    fn peek(&mut self) -> Option<&'a T> {
+        loop {
+            if let Some(l_item) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
+                    match l_item.cmp(&r_item) {
+                        Ordering::Less => {
+                            self.l_iter.skip_until(&r_item);
+                        }
+                        Ordering::Greater => {
+                            self.r_iter.skip_until(&l_item);
+                        }
+                        Ordering::Equal => {
                             return Some(l_item);
                         }
                     }
@@ -344,6 +369,18 @@ where
                 return None;
             }
         }
+    }
+
+    fn skip_past(&mut self, t: &T) -> &mut Self {
+        self.l_iter.skip_past(t);
+        self.r_iter.skip_past(t);
+        self
+    }
+
+    fn skip_until(&mut self, t: &T) -> &mut Self {
+        self.l_iter.skip_until(t);
+        self.r_iter.skip_until(t);
+        self
     }
 }
 
@@ -363,29 +400,71 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_item {
-                if let Some(r_item) = self.r_item {
+            if let Some(l_item) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
                     match l_item.cmp(&r_item) {
                         Ordering::Less => {
-                            self.l_item = self.l_iter.next();
-                            return Some(l_item);
+                            return self.l_iter.next();
                         }
                         Ordering::Greater => {
-                            self.r_item = self.r_iter.next_from(&l_item);
+                            self.r_iter.skip_until(&l_item);
                         }
                         Ordering::Equal => {
-                            self.l_item = self.l_iter.next();
-                            self.r_item = self.r_iter.next();
+                            self.l_iter.next();
+                            self.r_iter.next();
                         }
                     }
                 } else {
-                    self.l_item = self.l_iter.next();
+                    return self.l_iter.next();
+                }
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+impl<'a, T, L, R> SkipAheadIterator<'a, T, &'a T> for Difference<'a, T, L, R>
+where
+    T: 'a + Ord,
+    L: SkipAheadIterator<'a, T, &'a T>,
+    R: SkipAheadIterator<'a, T, &'a T>,
+{
+    fn peek(&mut self) -> Option<&'a T> {
+        loop {
+            if let Some(l_item) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
+                    match l_item.cmp(&r_item) {
+                        Ordering::Less => {
+                            return Some(l_item);
+                        }
+                        Ordering::Greater => {
+                            self.r_iter.skip_until(&l_item);
+                        }
+                        Ordering::Equal => {
+                            self.l_iter.next();
+                            self.r_iter.next();
+                        }
+                    }
+                } else {
                     return Some(l_item);
                 }
             } else {
                 return None;
             }
         }
+    }
+
+    fn skip_past(&mut self, t: &T) -> &mut Self {
+        self.l_iter.skip_past(t);
+        self.r_iter.skip_past(t);
+        self
+    }
+
+    fn skip_until(&mut self, t: &T) -> &mut Self {
+        self.l_iter.skip_until(t);
+        self.r_iter.skip_until(t);
+        self
     }
 }
 
@@ -405,33 +484,71 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_item {
-                if let Some(r_item) = self.r_item {
+            if let Some(l_item) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
                     match l_item.cmp(&r_item) {
                         Ordering::Less => {
-                            self.l_item = self.l_iter.next();
-                            return Some(l_item);
+                            return  self.l_iter.next();
                         }
                         Ordering::Greater => {
-                            self.r_item = self.r_iter.next();
-                            return Some(r_item);
+                            return self.r_iter.next();
                         }
                         Ordering::Equal => {
-                            self.l_item = self.l_iter.next();
-                            self.r_item = self.r_iter.next();
+                            self.l_iter.next();
+                            self.r_iter.next();
                         }
                     }
                 } else {
-                    self.l_item = self.l_iter.next();
-                    return Some(l_item);
+                    return self.l_iter.next();
                 }
-            } else if let Some(r_item) = self.r_item {
-                self.r_item = self.r_iter.next();
-                return Some(r_item);
             } else {
-                return None;
+                return self.r_iter.next();
             }
         }
+    }
+}
+
+impl<'a, T, L, R> SkipAheadIterator<'a, T, &'a T> for SymmetricDifference<'a, T, L, R>
+where
+    T: 'a + Ord,
+    L: SkipAheadIterator<'a, T, &'a T>,
+    R: SkipAheadIterator<'a, T, &'a T>,
+{
+    fn peek(&mut self) -> Option<&'a T> {
+        loop {
+            if let Some(l_item) = self.l_iter.peek() {
+                if let Some(r_item) = self.r_iter.peek() {
+                    match l_item.cmp(&r_item) {
+                        Ordering::Less => {
+                            return  Some(l_item);
+                        }
+                        Ordering::Greater => {
+                            return Some(r_item);
+                        }
+                        Ordering::Equal => {
+                            self.l_iter.next();
+                            self.r_iter.next();
+                        }
+                    }
+                } else {
+                    return Some(l_item);
+                }
+            } else {
+                return self.r_iter.peek();
+            }
+        }
+    }
+
+    fn skip_past(&mut self, t: &T) -> &mut Self {
+        self.l_iter.skip_past(t);
+        self.r_iter.skip_past(t);
+        self
+    }
+
+    fn skip_until(&mut self, t: &T) -> &mut Self {
+        self.l_iter.skip_until(t);
+        self.r_iter.skip_until(t);
+        self
     }
 }
 

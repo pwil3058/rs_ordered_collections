@@ -21,6 +21,9 @@ pub trait SkipAheadIterator<'a, T: 'a + Ord, V: 'a>: Iterator<Item = V> {
     /// Skip ahead to the item in the iterator at or after the selector.
     fn skip_until(&mut self, t: &T) -> &mut Self;
 
+    /// Peek at the next value of objects of type T in the iterator
+    fn peek(&mut self) -> Option<&'a T>;
+
     /// Return the next item in the iterator after the selector.
     fn next_after(&mut self, t: &T) -> Option<Self::Item> {
         self.skip_past(t).next()
