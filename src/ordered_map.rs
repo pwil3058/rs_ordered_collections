@@ -3,7 +3,10 @@ use std::default::Default;
 use std::ops::{Index, IndexMut};
 use std::vec;
 
+pub mod map_entry;
 pub mod ord_map_iterators;
+
+pub use self::map_entry::*;
 
 pub use self::ord_map_iterators::{
     MapIter, MapIterFilter, MapIterMut, MapMergeIter, ToMap, ValueIter, ValueIterMut,

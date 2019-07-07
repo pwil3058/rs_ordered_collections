@@ -2,7 +2,6 @@
 //! Useful for those situations when ordered iteration over a set's
 //! contents is a frequent requirement.
 
-pub mod map_entry;
 pub mod ordered_map;
 pub mod ordered_set;
 
