@@ -1,6 +1,6 @@
 use crate::OrderedMap;
 
-pub struct OccupiedEntry<'a, K: 'a + Ord, V: 'a> {
+pub struct OccupiedEntry<'a, K: Ord, V> {
     key: K,
     index: usize,
     map: &'a mut OrderedMap<K, V>,
@@ -20,7 +20,7 @@ impl<'a, K: 'a + Ord, V: 'a> OccupiedEntry<'a, K, V> {
     }
 }
 
-pub struct VacantEntry<'a, K: 'a + Ord, V: 'a> {
+pub struct VacantEntry<'a, K: Ord, V> {
     key: K,
     index: usize,
     map: &'a mut OrderedMap<K, V>,
