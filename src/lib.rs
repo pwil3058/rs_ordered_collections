@@ -14,14 +14,14 @@ pub use ordered_set::OrderedSet;
 /// Iterator enhancement to provide a skip ahead feature. This mechanism
 /// is used to optimise implementation of set operation (difference, intersection, etc)
 /// iterators.
-pub trait SkipAheadIterator<'a, T: 'a + Ord, V: 'a>: Iterator<Item = V> {
-    /// Peek at the next value of objects of type T in the iterator
+pub trait SkipAheadIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
+    /// Peek at the next item in the iterator
     fn peek(&mut self) -> Option<&'a T>;
 
-    /// Skip ahead to the item in the iterator after the selector.
+    /// Skip ahead to the next item in the iterator after the given item.
     fn skip_past(&mut self, t: &T) -> &mut Self;
 
-    /// Skip ahead to the item in the iterator at or after the selector.
+    /// Skip ahead to the next item in the iterator at or after the given item.
     fn skip_until(&mut self, t: &T) -> &mut Self;
 }
 

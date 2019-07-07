@@ -86,7 +86,7 @@ impl<'a, K: Ord, V: Default> Entry<'a, K, V> {
 }
 
 impl<K: Ord, V> OrderedMap<K, V> {
-    pub fn entry(&mut self, key: K) -> Entry<K, V> {
+    pub fn entry(&mut self, key: K) -> Entry<'_, K, V> {
         match self.keys.binary_search(&key) {
             Ok(index) => {
                 let entry = OccupiedEntry {

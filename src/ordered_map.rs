@@ -76,7 +76,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
     pub fn merge<'a>(
         &'a self,
         other: &'a Self,
-    ) -> MapMergeIter<'a, K, V, MapIter<K, V>, MapIter<K, V>> {
+    ) -> MapMergeIter<'a, K, V, MapIter<'_, K, V>, MapIter<'_, K, V>> {
         MapMergeIter::new(self.iter(), other.iter())
     }
 

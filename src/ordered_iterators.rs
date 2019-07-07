@@ -17,7 +17,7 @@ macro_rules! from_index {
 }
 
 use crate::OrderedSet;
-use crate::SkipAheadIterator;
+pub use crate::SkipAheadIterator;
 
 use crate::iter_ops::IterSetOperations;
 
@@ -48,7 +48,7 @@ where
 pub fn output_is_ordered_nodups<'a, T, I>(iter: &mut I) -> bool
 where
     T: 'a + Ord,
-    I: SkipAheadIterator<'a, T, &'a T>,
+    I: SkipAheadIterator<'a, T>,
 {
     let mut o_previous = iter.next();
     while let Some(previous) = o_previous {
@@ -94,7 +94,7 @@ impl<'a, T: Ord> Iterator for SetIter<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T, &'a T> for SetIter<'a, T> {
+impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIter<'a, T> {
     fn skip_past(&mut self, t: &T) -> &mut Self {
         self.index += after_index!(self.ordered_list[self.index..], t);
         self

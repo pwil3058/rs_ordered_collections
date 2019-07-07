@@ -8,34 +8,31 @@ use crate::ordered_iterators::*;
 
 use crate::SkipAheadIterator;
 
-pub trait IterSetOperations<'a, T>: SkipAheadIterator<'a, T, &'a T> + Sized
+pub trait IterSetOperations<'a, T>: SkipAheadIterator<'a, T> + Sized
 where
     T: 'a + Ord,
 {
     /// Iterate over the set union of this Iterator and the given Iterator
     /// in the order defined their elements Ord trait implementation.
-    fn union<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> Union<'a, T, Self, I> {
+    fn union<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Union<'a, T, Self, I> {
         Union::new(self, iter)
     }
 
     /// Iterate over the set intersection of this Iterator and the given Iterator
     /// in the order defined their elements Ord trait implementation.
-    fn intersection<I: SkipAheadIterator<'a, T, &'a T>>(
-        self,
-        iter: I,
-    ) -> Intersection<'a, T, Self, I> {
+    fn intersection<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Intersection<'a, T, Self, I> {
         Intersection::new(self, iter)
     }
 
     /// Iterate over the set difference of this Iterator and the given Iterator
     /// in the order defined their elements Ord trait implementation.
-    fn difference<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> Difference<'a, T, Self, I> {
+    fn difference<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Difference<'a, T, Self, I> {
         Difference::new(self, iter)
     }
 
     /// Iterate over the set symmetric difference of this Iterator and the given Iterator
     /// in the order defined their elements Ord trait implementation.
-    fn symmetric_difference<I: SkipAheadIterator<'a, T, &'a T>>(
+    fn symmetric_difference<I: SkipAheadIterator<'a, T>>(
         self,
         iter: I,
     ) -> SymmetricDifference<'a, T, Self, I> {
@@ -44,31 +41,31 @@ where
 
     /// Is the output of the given Iterator disjoint from the output of
     /// this iterator?
-    fn is_disjoint<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> bool {
+    fn is_disjoint<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
         are_disjoint(self, iter)
     }
 
     /// Is the output of the given Iterator a proper subset of the output of
     /// this iterator?
-    fn is_proper_subset<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> bool {
+    fn is_proper_subset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
         a_proper_superset_b(self, iter)
     }
 
     /// Is the output of the given Iterator a proper superset of the output of
     /// this iterator?
-    fn is_proper_superset<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> bool {
+    fn is_proper_superset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
         a_proper_superset_b(iter, self)
     }
 
     /// Is the output of the given Iterator a subset of the output of
     /// this iterator?
-    fn is_subset<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> bool {
+    fn is_subset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
         a_superset_b(self, iter)
     }
 
     /// Is the output of the given Iterator a superset of the output of
     /// this iterator?
-    fn is_superset<I: SkipAheadIterator<'a, T, &'a T>>(self, iter: I) -> bool {
+    fn is_superset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
         a_superset_b(iter, self)
     }
 }
@@ -77,8 +74,8 @@ where
 pub fn are_disjoint<'a, T, L, R>(mut l_iter: L, mut r_iter: R) -> bool
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T, &'a T>,
-    R: SkipAheadIterator<'a, T, &'a T>,
+    L: SkipAheadIterator<'a, T>,
+    R: SkipAheadIterator<'a, T>,
 {
     loop {
         if let Some(l_item) = l_iter.peek() {
@@ -107,8 +104,8 @@ where
 pub fn a_superset_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
 where
     T: 'a + Ord,
-    A: SkipAheadIterator<'a, T, &'a T>,
-    B: SkipAheadIterator<'a, T, &'a T>,
+    A: SkipAheadIterator<'a, T>,
+    B: SkipAheadIterator<'a, T>,
 {
     while let Some(b_item) = b_iter.peek() {
         if let Some(a_item) = a_iter.peek() {
@@ -135,8 +132,8 @@ where
 pub fn a_proper_superset_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
 where
     T: 'a + Ord,
-    A: SkipAheadIterator<'a, T, &'a T>,
-    B: SkipAheadIterator<'a, T, &'a T>,
+    A: SkipAheadIterator<'a, T>,
+    B: SkipAheadIterator<'a, T>,
 {
     let mut result = false;
     while let Some(b_item) = b_iter.peek() {
@@ -167,19 +164,19 @@ macro_rules! define_set_op_iterator {
         pub struct $iter<'a, T, L, R>
         where
             T: Ord,
-            L: SkipAheadIterator<'a, T, &'a T>,
-            R: SkipAheadIterator<'a, T, &'a T>,
+            L: SkipAheadIterator<'a, T>,
+            R: SkipAheadIterator<'a, T>,
         {
             l_iter: L,
             r_iter: R,
-            phantom: PhantomData<&'a T>
+            phantom: PhantomData<&'a T>,
         }
 
         impl<'a, T, L, R> $iter<'a, T, L, R>
         where
             T: 'a + Ord,
-            L: SkipAheadIterator<'a, T, &'a T>,
-            R: SkipAheadIterator<'a, T, &'a T>,
+            L: SkipAheadIterator<'a, T>,
+            R: SkipAheadIterator<'a, T>,
         {
             pub fn new(l_iter: L, r_iter: R) -> Self {
                 Self {
@@ -193,24 +190,24 @@ macro_rules! define_set_op_iterator {
         impl<'a, T, L, R> ToList<'a, T> for $iter<'a, T, L, R>
         where
             T: 'a + Ord + Clone,
-            L: SkipAheadIterator<'a, T, &'a T>,
-            R: SkipAheadIterator<'a, T, &'a T>,
+            L: SkipAheadIterator<'a, T>,
+            R: SkipAheadIterator<'a, T>,
         {
         }
 
         impl<'a, T, L, R> ToSet<'a, T> for $iter<'a, T, L, R>
         where
             T: 'a + Ord + Clone,
-            L: SkipAheadIterator<'a, T, &'a T>,
-            R: SkipAheadIterator<'a, T, &'a T>,
+            L: SkipAheadIterator<'a, T>,
+            R: SkipAheadIterator<'a, T>,
         {
         }
 
         impl<'a, T, L, R> IterSetOperations<'a, T> for $iter<'a, T, L, R>
         where
             T: 'a + Ord,
-            L: SkipAheadIterator<'a, T, &'a T>,
-            R: SkipAheadIterator<'a, T, &'a T>,
+            L: SkipAheadIterator<'a, T>,
+            R: SkipAheadIterator<'a, T>,
         {
         }
     };
@@ -225,8 +222,8 @@ define_set_op_iterator!(
 impl<'a, T, L, R> Iterator for Union<'a, T, L, R>
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T, &'a T>,
-    R: SkipAheadIterator<'a, T, &'a T>,
+    L: SkipAheadIterator<'a, T>,
+    R: SkipAheadIterator<'a, T>,
 {
     type Item = &'a T;
 
@@ -254,11 +251,11 @@ where
     }
 }
 
-impl<'a, T, L, R> SkipAheadIterator<'a, T, &'a T> for Union<'a, T, L, R>
+impl<'a, T, L, R> SkipAheadIterator<'a, T> for Union<'a, T, L, R>
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T, &'a T>,
-    R: SkipAheadIterator<'a, T, &'a T>,
+    L: SkipAheadIterator<'a, T>,
+    R: SkipAheadIterator<'a, T>,
 {
     fn peek(&mut self) -> Option<&'a T> {
         if let Some(l_item) = self.l_iter.peek() {
@@ -301,8 +298,8 @@ define_set_op_iterator!(
 impl<'a, T, L, R> Iterator for Intersection<'a, T, L, R>
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T, &'a T>,
-    R: SkipAheadIterator<'a, T, &'a T>,
+    L: SkipAheadIterator<'a, T>,
+    R: SkipAheadIterator<'a, T>,
 {
     type Item = &'a T;
 
@@ -332,11 +329,11 @@ where
     }
 }
 
-impl<'a, T, L, R> SkipAheadIterator<'a, T, &'a T> for Intersection<'a, T, L, R>
+impl<'a, T, L, R> SkipAheadIterator<'a, T> for Intersection<'a, T, L, R>
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T, &'a T>,
-    R: SkipAheadIterator<'a, T, &'a T>,
+    L: SkipAheadIterator<'a, T>,
+    R: SkipAheadIterator<'a, T>,
 {
     fn peek(&mut self) -> Option<&'a T> {
         loop {
@@ -384,8 +381,8 @@ Iterators whose (individual) output is ordered and contains no duplicates.",
 impl<'a, T, L, R> Iterator for Difference<'a, T, L, R>
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T, &'a T>,
-    R: SkipAheadIterator<'a, T, &'a T>,
+    L: SkipAheadIterator<'a, T>,
+    R: SkipAheadIterator<'a, T>,
 {
     type Item = &'a T;
 
@@ -415,11 +412,11 @@ where
     }
 }
 
-impl<'a, T, L, R> SkipAheadIterator<'a, T, &'a T> for Difference<'a, T, L, R>
+impl<'a, T, L, R> SkipAheadIterator<'a, T> for Difference<'a, T, L, R>
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T, &'a T>,
-    R: SkipAheadIterator<'a, T, &'a T>,
+    L: SkipAheadIterator<'a, T>,
+    R: SkipAheadIterator<'a, T>,
 {
     fn peek(&mut self) -> Option<&'a T> {
         loop {
@@ -468,8 +465,8 @@ Iterators whose (individual) output is ordered and contains no duplicates.",
 impl<'a, T, L, R> Iterator for SymmetricDifference<'a, T, L, R>
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T, &'a T>,
-    R: SkipAheadIterator<'a, T, &'a T>,
+    L: SkipAheadIterator<'a, T>,
+    R: SkipAheadIterator<'a, T>,
 {
     type Item = &'a T;
 
@@ -479,7 +476,7 @@ where
                 if let Some(r_item) = self.r_iter.peek() {
                     match l_item.cmp(&r_item) {
                         Ordering::Less => {
-                            return  self.l_iter.next();
+                            return self.l_iter.next();
                         }
                         Ordering::Greater => {
                             return self.r_iter.next();
@@ -499,11 +496,11 @@ where
     }
 }
 
-impl<'a, T, L, R> SkipAheadIterator<'a, T, &'a T> for SymmetricDifference<'a, T, L, R>
+impl<'a, T, L, R> SkipAheadIterator<'a, T> for SymmetricDifference<'a, T, L, R>
 where
     T: 'a + Ord,
-    L: SkipAheadIterator<'a, T, &'a T>,
-    R: SkipAheadIterator<'a, T, &'a T>,
+    L: SkipAheadIterator<'a, T>,
+    R: SkipAheadIterator<'a, T>,
 {
     fn peek(&mut self) -> Option<&'a T> {
         loop {
@@ -511,7 +508,7 @@ where
                 if let Some(r_item) = self.r_iter.peek() {
                     match l_item.cmp(&r_item) {
                         Ordering::Less => {
-                            return  Some(l_item);
+                            return Some(l_item);
                         }
                         Ordering::Greater => {
                             return Some(r_item);

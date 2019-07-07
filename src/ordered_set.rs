@@ -207,7 +207,7 @@ macro_rules! define_set_operation {
 
             pub fn $osi_function<'a, I>(&'a self, other_iter: I) -> $iter<'a, T, SetIter<'a, T>, I>
             where
-                I: SkipAheadIterator<'a, T, &'a T> + Sized,
+                I: SkipAheadIterator<'a, T> + Sized,
             {
                 $iter::new(self.iter(), other_iter)
             }
