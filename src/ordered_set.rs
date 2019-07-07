@@ -21,7 +21,7 @@ use crate::SkipAheadIterator;
 /// An set of items of type T ordered according to Ord (with no duplicates)
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct OrderedSet<T: Ord> {
-    pub(crate) ordered_list: Vec<T>,
+    pub(crate) members: Vec<T>,
 }
 
 impl<T: Ord> OrderedSet<T> {
@@ -31,25 +31,25 @@ impl<T: Ord> OrderedSet<T> {
 
     /// Return the number of items in this set.
     pub fn len(&self) -> usize {
-        self.ordered_list.len()
+        self.members.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.ordered_list.len() == 0
+        self.members.len() == 0
     }
 
     pub fn capacity(&self) -> usize {
-        self.ordered_list.capacity()
+        self.members.capacity()
     }
 
     pub fn clear(&mut self) {
-        self.ordered_list.clear()
+        self.members.clear()
     }
 
     /// Return false if the item was already a member otherwise true
     pub fn insert(&mut self, item: T) -> bool {
-        if let Err(index) = self.ordered_list.binary_search(&item) {
-            self.ordered_list.insert(index, item);
+        if let Err(index) = self.members.binary_search(&item) {
+            self.members.insert(index, item);
             true
         } else {
             false
@@ -58,8 +58,8 @@ impl<T: Ord> OrderedSet<T> {
 
     /// Return true if the item was a member and false otherwise
     pub fn remove(&mut self, item: &T) -> bool {
-        if let Ok(index) = self.ordered_list.binary_search(item) {
-            self.ordered_list.remove(index);
+        if let Ok(index) = self.members.binary_search(item) {
+            self.members.remove(index);
             true
         } else {
             false
@@ -68,26 +68,26 @@ impl<T: Ord> OrderedSet<T> {
 
     /// Return false if the item is already a member
     pub fn contains(&self, item: &T) -> bool {
-        self.ordered_list.binary_search(item).is_ok()
+        self.members.binary_search(item).is_ok()
     }
 
     pub fn first(&self) -> Option<&T> {
-        self.ordered_list.first()
+        self.members.first()
     }
 
     pub fn iter(&self) -> SetIter<'_, T> {
-        SetIter::new(&self.ordered_list)
+        SetIter::new(&self.members)
     }
 
     // TODO: implement a more useful drain for OrderedSet
     pub fn drain(&mut self) -> Drain<'_, T> {
-        self.ordered_list.drain(..)
+        self.members.drain(..)
     }
 
-    /// Return true if ordered_list is sorted and contains no duplicates
+    /// Return true if members is sorted and contains no duplicates
     pub fn is_valid(&self) -> bool {
-        for i in 1..self.ordered_list.len() {
-            if self.ordered_list[i - 1] >= self.ordered_list[i] {
+        for i in 1..self.members.len() {
+            if self.members[i - 1] >= self.members[i] {
                 return false;
             }
         }
@@ -148,7 +148,7 @@ impl<T: Ord> OrderedSet<T> {
 impl<T: Ord> Default for OrderedSet<T> {
     fn default() -> Self {
         Self {
-            ordered_list: vec![],
+            members: vec![],
         }
     }
 }

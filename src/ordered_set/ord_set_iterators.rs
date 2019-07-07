@@ -26,7 +26,7 @@ pub trait ToList<'a, T>: Iterator<Item = &'a T>
 where
     T: 'a + Clone,
 {
-    /// Create a Vec<T> list from the items in the Iterator's output
+    /// Create a Vec<T> list from the elements in the Iterator's output
     fn to_list(&mut self) -> Vec<T> {
         self.cloned().collect()
     }
@@ -36,26 +36,26 @@ pub trait ToSet<'a, T>: ToList<'a, T>
 where
     T: 'a + Ord + Clone,
 {
-    /// Create a OrderedSet<T> from the items in the Iterator's output
+    /// Create a OrderedSet<T> from the elements in the Iterator's output
     fn to_set(&mut self) -> OrderedSet<T> {
         OrderedSet::<T> {
-            ordered_list: self.to_list(),
+            members: self.to_list(),
         }
     }
 }
 
 // SET ITERATOR
 
-/// An Iterator over the items in an ordered list
+/// An Iterator over the elements in an ordered list
 pub struct SetIter<'a, T: Ord> {
-    ordered_list: &'a [T],
+    elements: &'a [T],
     index: usize,
 }
 
 impl<'a, T: Ord> SetIter<'a, T> {
-    pub fn new(ordered_list: &'a [T]) -> Self {
+    pub fn new(elements: &'a [T]) -> Self {
         Self {
-            ordered_list,
+            elements,
             index: 0,
         }
     }
@@ -65,9 +65,9 @@ impl<'a, T: Ord> Iterator for SetIter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(item) = self.ordered_list.get(self.index) {
+        if let Some(element) = self.elements.get(self.index) {
             self.index += 1;
-            Some(item)
+            Some(element)
         } else {
             None
         }
@@ -76,17 +76,17 @@ impl<'a, T: Ord> Iterator for SetIter<'a, T> {
 
 impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIter<'a, T> {
     fn skip_past(&mut self, t: &T) -> &mut Self {
-        self.index += after_index!(self.ordered_list[self.index..], t);
+        self.index += after_index!(self.elements[self.index..], t);
         self
     }
 
     fn skip_until(&mut self, t: &T) -> &mut Self {
-        self.index += from_index!(self.ordered_list[self.index..], t);
+        self.index += from_index!(self.elements[self.index..], t);
         self
     }
 
     fn peek(&mut self) -> Option<&'a T> {
-        self.ordered_list.get(self.index)
+        self.elements.get(self.index)
     }
 }
 
@@ -166,14 +166,14 @@ where
     R: SkipAheadIterator<'a, T>,
 {
     loop {
-        if let Some(l_item) = l_iter.peek() {
-            if let Some(r_item) = r_iter.peek() {
-                match l_item.cmp(&r_item) {
+        if let Some(l_element) = l_iter.peek() {
+            if let Some(r_element) = r_iter.peek() {
+                match l_element.cmp(&r_element) {
                     Ordering::Less => {
-                        l_iter.skip_until(r_item);
+                        l_iter.skip_until(r_element);
                     }
                     Ordering::Greater => {
-                        r_iter.skip_until(l_item);
+                        r_iter.skip_until(l_element);
                     }
                     Ordering::Equal => {
                         return false;
@@ -195,14 +195,14 @@ where
     A: SkipAheadIterator<'a, T>,
     B: SkipAheadIterator<'a, T>,
 {
-    while let Some(b_item) = b_iter.peek() {
-        if let Some(a_item) = a_iter.peek() {
-            match b_item.cmp(&a_item) {
+    while let Some(b_element) = b_iter.peek() {
+        if let Some(a_element) = a_iter.peek() {
+            match b_element.cmp(&a_element) {
                 Ordering::Less => {
                     return false;
                 }
                 Ordering::Greater => {
-                    a_iter.skip_until(b_item);
+                    a_iter.skip_until(b_element);
                 }
                 Ordering::Equal => {
                     b_iter.next();
@@ -224,15 +224,15 @@ where
     B: SkipAheadIterator<'a, T>,
 {
     let mut result = false;
-    while let Some(b_item) = b_iter.peek() {
-        if let Some(a_item) = a_iter.peek() {
-            match b_item.cmp(&a_item) {
+    while let Some(b_element) = b_iter.peek() {
+        if let Some(a_element) = a_iter.peek() {
+            match b_element.cmp(&a_element) {
                 Ordering::Less => {
                     return false;
                 }
                 Ordering::Greater => {
                     result = true;
-                    a_iter.skip_until(b_item);
+                    a_iter.skip_until(b_element);
                 }
                 Ordering::Equal => {
                     b_iter.next();
@@ -316,9 +316,9 @@ where
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(l_item) = self.l_iter.peek() {
-            if let Some(r_item) = self.r_iter.peek() {
-                match l_item.cmp(&r_item) {
+        if let Some(l_element) = self.l_iter.peek() {
+            if let Some(r_element) = self.r_iter.peek() {
+                match l_element.cmp(&r_element) {
                     Ordering::Less => {
                         return self.l_iter.next();
                     }
@@ -346,18 +346,18 @@ where
     R: SkipAheadIterator<'a, T>,
 {
     fn peek(&mut self) -> Option<&'a T> {
-        if let Some(l_item) = self.l_iter.peek() {
-            if let Some(r_item) = self.r_iter.peek() {
-                match l_item.cmp(&r_item) {
+        if let Some(l_element) = self.l_iter.peek() {
+            if let Some(r_element) = self.r_iter.peek() {
+                match l_element.cmp(&r_element) {
                     Ordering::Less | Ordering::Equal => {
-                        return Some(l_item);
+                        return Some(l_element);
                     }
                     Ordering::Greater => {
-                        return Some(r_item);
+                        return Some(r_element);
                     }
                 }
             } else {
-                return Some(l_item);
+                return Some(l_element);
             }
         } else {
             return self.r_iter.peek();
@@ -393,14 +393,14 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_iter.peek() {
-                if let Some(r_item) = self.r_iter.peek() {
-                    match l_item.cmp(&r_item) {
+            if let Some(l_element) = self.l_iter.peek() {
+                if let Some(r_element) = self.r_iter.peek() {
+                    match l_element.cmp(&r_element) {
                         Ordering::Less => {
-                            self.l_iter.skip_until(&r_item);
+                            self.l_iter.skip_until(&r_element);
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_item);
+                            self.r_iter.skip_until(&l_element);
                         }
                         Ordering::Equal => {
                             self.r_iter.next();
@@ -425,17 +425,17 @@ where
 {
     fn peek(&mut self) -> Option<&'a T> {
         loop {
-            if let Some(l_item) = self.l_iter.peek() {
-                if let Some(r_item) = self.r_iter.peek() {
-                    match l_item.cmp(&r_item) {
+            if let Some(l_element) = self.l_iter.peek() {
+                if let Some(r_element) = self.r_iter.peek() {
+                    match l_element.cmp(&r_element) {
                         Ordering::Less => {
-                            self.l_iter.skip_until(&r_item);
+                            self.l_iter.skip_until(&r_element);
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_item);
+                            self.r_iter.skip_until(&l_element);
                         }
                         Ordering::Equal => {
-                            return Some(l_item);
+                            return Some(l_element);
                         }
                     }
                 } else {
@@ -476,14 +476,14 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_iter.peek() {
-                if let Some(r_item) = self.r_iter.peek() {
-                    match l_item.cmp(&r_item) {
+            if let Some(l_element) = self.l_iter.peek() {
+                if let Some(r_element) = self.r_iter.peek() {
+                    match l_element.cmp(&r_element) {
                         Ordering::Less => {
                             return self.l_iter.next();
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_item);
+                            self.r_iter.skip_until(&l_element);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -508,14 +508,14 @@ where
 {
     fn peek(&mut self) -> Option<&'a T> {
         loop {
-            if let Some(l_item) = self.l_iter.peek() {
-                if let Some(r_item) = self.r_iter.peek() {
-                    match l_item.cmp(&r_item) {
+            if let Some(l_element) = self.l_iter.peek() {
+                if let Some(r_element) = self.r_iter.peek() {
+                    match l_element.cmp(&r_element) {
                         Ordering::Less => {
-                            return Some(l_item);
+                            return Some(l_element);
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_item);
+                            self.r_iter.skip_until(&l_element);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -523,7 +523,7 @@ where
                         }
                     }
                 } else {
-                    return Some(l_item);
+                    return Some(l_element);
                 }
             } else {
                 return None;
@@ -560,9 +560,9 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let Some(l_item) = self.l_iter.peek() {
-                if let Some(r_item) = self.r_iter.peek() {
-                    match l_item.cmp(&r_item) {
+            if let Some(l_element) = self.l_iter.peek() {
+                if let Some(r_element) = self.r_iter.peek() {
+                    match l_element.cmp(&r_element) {
                         Ordering::Less => {
                             return self.l_iter.next();
                         }
@@ -592,14 +592,14 @@ where
 {
     fn peek(&mut self) -> Option<&'a T> {
         loop {
-            if let Some(l_item) = self.l_iter.peek() {
-                if let Some(r_item) = self.r_iter.peek() {
-                    match l_item.cmp(&r_item) {
+            if let Some(l_element) = self.l_iter.peek() {
+                if let Some(r_element) = self.r_iter.peek() {
+                    match l_element.cmp(&r_element) {
                         Ordering::Less => {
-                            return Some(l_item);
+                            return Some(l_element);
                         }
                         Ordering::Greater => {
-                            return Some(r_item);
+                            return Some(r_element);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -607,7 +607,7 @@ where
                         }
                     }
                 } else {
-                    return Some(l_item);
+                    return Some(l_element);
                 }
             } else {
                 return self.r_iter.peek();
@@ -641,11 +641,11 @@ mod tests {
     {
         let mut o_previous = iter.next();
         while let Some(previous) = o_previous {
-            if let Some(item) = iter.next() {
-                if previous >= item {
+            if let Some(element) = iter.next() {
+                if previous >= element {
                     return false;
                 }
-                o_previous = Some(item);
+                o_previous = Some(element);
             } else {
                 o_previous = None;
             }
