@@ -22,8 +22,6 @@ use std::slice::IterMut;
 
 use crate::OrderedMap;
 
-pub use crate::ordered_iterators::SetIter;
-
 use crate::SkipAheadIterator;
 
 /// Iterator enhancement to provide a skip ahead feature. This mechanism
@@ -873,6 +871,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ordered_set::ord_set_iterators::SetIter;
 
     static LIST: &[&str] = &["a", "c", "e", "g", "i", "k", "m"];
     static VALUES: &[i32] = &[6, 5, 4, 3, 2, 1, 0];

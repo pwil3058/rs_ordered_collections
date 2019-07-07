@@ -8,8 +8,13 @@ use std::iter::FromIterator;
 use std::ops::{BitAnd, BitOr, BitXor, Sub};
 use std::vec::Drain;
 
-pub use crate::iter_ops::*;
-pub use crate::ordered_iterators::*;
+pub mod ord_set_iterators;
+
+use self::ord_set_iterators::{
+    a_proper_superset_b, a_superset_b, are_disjoint, Difference, Intersection, SetIter,
+    SymmetricDifference, ToSet, Union,
+};
+
 use crate::OrderedMap;
 use crate::SkipAheadIterator;
 
@@ -267,6 +272,8 @@ mod tests {
 
     use super::*;
     use rand::prelude::*;
+
+    use crate::ordered_set::ord_set_iterators::ToList;
 
     static TEST_STRS: &[&str] = &[
         "hhh", "aaa", "ggg", "sss", "zzz", "bbb", "fff", "iii", "qqq", "jjj", "ddd", "eee", "ccc",

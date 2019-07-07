@@ -3,12 +3,15 @@ use std::default::Default;
 use std::ops::{Index, IndexMut};
 use std::vec;
 
-use crate::iter_ops::*;
-
 pub mod ord_map_iterators;
 
 pub use self::ord_map_iterators::{
-    MapIter, MapIterFilter, MapIterMut, MapMergeIter, SetIter, ToMap, ValueIter, ValueIterMut,
+    MapIter, MapIterFilter, MapIterMut, MapMergeIter, ToMap, ValueIter, ValueIterMut,
+};
+
+pub use crate::ordered_set::ord_set_iterators::{
+    a_proper_superset_b, a_superset_b, are_disjoint, Difference, Intersection, SetIter,
+    SymmetricDifference, Union,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
