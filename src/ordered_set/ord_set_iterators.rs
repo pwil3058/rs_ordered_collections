@@ -20,7 +20,20 @@ use std::cmp::Ordering;
 use std::marker::PhantomData;
 
 use crate::OrderedSet;
-pub use crate::SkipAheadIterator;
+
+/// Iterator enhancement to provide a skip ahead feature. This mechanism
+/// is used to optimise implementation of set operation (difference, intersection, etc)
+/// iterators.
+pub trait SkipAheadIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
+    /// Peek at the next item in the iterator
+    fn peek(&mut self) -> Option<&'a T>;
+
+    /// Skip ahead to the next item in the iterator after the given item.
+    fn skip_past(&mut self, t: &T) -> &mut Self;
+
+    /// Skip ahead to the next item in the iterator at or after the given item.
+    fn skip_until(&mut self, t: &T) -> &mut Self;
+}
 
 pub trait ToList<'a, T>: Iterator<Item = &'a T>
 where
@@ -54,10 +67,7 @@ pub struct SetIter<'a, T: Ord> {
 
 impl<'a, T: Ord> SetIter<'a, T> {
     pub fn new(elements: &'a [T]) -> Self {
-        Self {
-            elements,
-            index: 0,
-        }
+        Self { elements, index: 0 }
     }
 }
 

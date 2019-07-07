@@ -22,7 +22,7 @@ use std::slice::IterMut;
 
 use crate::OrderedMap;
 
-use crate::SkipAheadIterator;
+use crate::ordered_set::ord_set_iterators::SkipAheadIterator;
 
 /// Iterator enhancement to provide a skip ahead feature. This mechanism
 /// is used to optimise implementation of set like operation (except, only, etc)

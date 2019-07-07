@@ -12,11 +12,10 @@ pub mod ord_set_iterators;
 
 use self::ord_set_iterators::{
     a_proper_superset_b, a_superset_b, are_disjoint, Difference, Intersection, SetIter,
-    SymmetricDifference, ToSet, Union,
+    SkipAheadIterator, SymmetricDifference, ToSet, Union,
 };
 
 use crate::OrderedMap;
-use crate::SkipAheadIterator;
 
 /// An set of items of type T ordered according to Ord (with no duplicates)
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -147,9 +146,7 @@ impl<T: Ord> OrderedSet<T> {
 
 impl<T: Ord> Default for OrderedSet<T> {
     fn default() -> Self {
-        Self {
-            members: vec![],
-        }
+        Self { members: vec![] }
     }
 }
 
