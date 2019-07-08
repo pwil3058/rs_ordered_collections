@@ -193,10 +193,10 @@ impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for OrderedSet<T> {
     }
 }
 
-// TODO: add doc strings to arguments for these macros.
 macro_rules! define_set_operation {
-    ( $iter:ident, $function:ident, $op:ident, $op_fn:ident ) => {
+    ( $iter:ident, $fn_doc:meta, $function:ident,  $op_doc:meta, $op:ident, $op_fn:ident ) => {
         impl<T: Ord> OrderedSet<T> {
+            #[$fn_doc]
             pub fn $function<'a>(
                 &'a self,
                 other: &'a Self,
@@ -208,6 +208,7 @@ macro_rules! define_set_operation {
         impl<T: Ord + Clone> $op for OrderedSet<T> {
             type Output = Self;
 
+            #[$op_doc]
             fn $op_fn(self, other: Self) -> Self::Output {
                 self.$function(&other).to_set()
             }
@@ -216,6 +217,7 @@ macro_rules! define_set_operation {
         impl<T: Ord + Clone> $op for &OrderedSet<T> {
             type Output = OrderedSet<T>;
 
+            #[$op_doc]
             fn $op_fn(self, other: Self) -> Self::Output {
                 self.$function(&other).to_set()
             }
@@ -223,10 +225,46 @@ macro_rules! define_set_operation {
     };
 }
 
-define_set_operation!(Difference, difference, Sub, sub);
-define_set_operation!(SymmetricDifference, symmetric_difference, BitXor, bitxor);
-define_set_operation!(Union, union, BitOr, bitor);
-define_set_operation!(Intersection, intersection, BitAnd, bitand);
+define_set_operation!(
+    Difference,
+    doc = "Return an iterator over the set difference between this set and other
+    i.e. the elements that are in this set but not in other.",
+    difference,
+    doc = "Apply the - operator to return a new set containing the set difference
+    between this set and other i.e. the elements that are in this set but not in other.",
+    Sub,
+    sub
+);
+define_set_operation!(
+    SymmetricDifference,
+    doc = "Return an iterator over the symmetric set difference between this set and other
+    i.e. the elements that are in this set or in other but not in both.",
+    symmetric_difference,
+    doc = "Apply the ^ operator to return a new set containing the symmetric set difference
+    between this set and other i.e. the elements that are in this set or in other but not in both.",
+    BitXor,
+    bitxor
+);
+define_set_operation!(
+    Union,
+    doc = "Return an iterator over the union of this set and other
+    i.e. the elements that are in this set or other.",
+    union,
+    doc = "Apply the | operator to return a new set containing the union of this set and other
+    i.e. the elements that are in this set or in other.",
+    BitOr,
+    bitor
+);
+define_set_operation!(
+    Intersection,
+    doc = "Return an iterator over the intersection of this set and other
+    i.e. the elements that are in both this set and other.",
+    intersection,
+    doc = "Apply the & operator to return a new set containing the intersection of this set and other
+    i.e. the elements that are in both this set and in other.",
+    BitAnd,
+    bitand
+);
 
 #[cfg(test)]
 mod tests {
