@@ -153,22 +153,20 @@ impl<T: Ord> Default for OrderedSet<T> {
 /// Convert to OrderedSet<T> from a slice of elements
 impl<T: Ord + Clone> From<&[T]> for OrderedSet<T> {
     fn from(list: &[T]) -> Self {
-        let mut ordered_set = Self::default();
-        for i in list.iter().cloned() {
-            ordered_set.insert(i);
-        }
-        ordered_set
+        let mut vec = list.to_vec();
+        vec.sort();
+        vec.dedup();
+        Self { members: vec }
+
     }
 }
 
 /// Convert to OrderedSet<T> from a slice of elements
 impl<T: Ord + Clone> From<Vec<T>> for OrderedSet<T> {
     fn from(mut vec: Vec<T>) -> Self {
-        let mut ordered_set = Self::default();
-        for i in vec.drain(..) {
-            ordered_set.insert(i);
-        }
-        ordered_set
+        vec.sort();
+        vec.dedup();
+        Self { members: vec }
     }
 }
 
