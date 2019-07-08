@@ -363,6 +363,7 @@ where
 pub struct MapIterMut<'a, K: Ord, V> {
     keys: &'a [K],
     index: usize,
+    // NB: use of iter_mut is due unresolvable lifetime issues with obvious solution
     iter_mut: IterMut<'a, V>,
 }
 
@@ -698,6 +699,7 @@ impl<'a, K: Ord, V> SkipAheadMapIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
 pub struct ValueIterMut<'a, K: Ord, V> {
     keys: &'a [K],
     index: usize,
+    // NB: use of iter_mut is due unresolvable lifetime issues with obvious solution
     iter_mut: IterMut<'a, V>,
 }
 
@@ -1190,8 +1192,6 @@ mod tests {
         assert_eq!(LIST.len() + LIST_1.len() + LIST_2.len(), map.len());
     }
 
-    // TODO: test map_iter_mut_merge()
-
     #[test]
     fn map_iter_except() {
         let set_iter = SetIter::new(&["e", "i", "k"]);
@@ -1260,6 +1260,37 @@ mod tests {
         for (i, pair) in MapIter::new(LIST, &values).enumerate() {
             assert_eq!((i as i32 + 5), *pair.1);
         }
+    }
+
+    #[test]
+    fn map_iter_mut_merge() {
+        let mut map_0 = MapIter::new(LIST, VALUES).to_map();
+        let mut map_1 = MapIter::new(LIST_1, VALUES_1).to_map();
+        let mut map_2 = MapIter::new(LIST_2, VALUES_2).to_map();
+        for (_, value) in map_0.iter_mut().merge(map_1.iter_mut()).merge(map_2.iter_mut()) {
+            *value = 1024;
+        };
+        assert!(map_0.values().all(|x| *x == 1024));
+        assert!(map_1.values().all(|x| *x == 1024));
+        assert!(map_2.values().all(|x| *x == 1024));
+        let mut map_0 = MapIter::new(LIST, VALUES).to_map();
+        let mut map_1 = MapIter::new(LIST_1, VALUES_1).to_map();
+        let mut map_2 = MapIter::new(LIST_2, VALUES_2).to_map();
+        for (_, value) in map_0.iter_mut().merge(map_1.iter_mut().merge(map_2.iter_mut())) {
+            *value = 2048;
+        };
+        assert!(map_0.values().all(|x| *x == 2048));
+        assert!(map_1.values().all(|x| *x == 2048));
+        assert!(map_2.values().all(|x| *x == 2048));
+        let mut map_0 = MapIter::new(LIST, VALUES).to_map();
+        let mut map_1 = MapIter::new(LIST_1, VALUES_1).to_map();
+        let mut map_2 = MapIter::new(LIST_2, VALUES_2).to_map();
+        for (_, value) in map_0.iter_mut() | map_1.iter_mut() | map_2.iter_mut() {
+            *value = 4096;
+        };
+        assert!(map_0.values().all(|x| *x == 4096));
+        assert!(map_1.values().all(|x| *x == 4096));
+        assert!(map_2.values().all(|x| *x == 4096));
     }
 
     #[test]

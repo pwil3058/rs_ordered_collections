@@ -78,7 +78,6 @@ impl<T: Ord> OrderedSet<T> {
         SetIter::new(&self.members)
     }
 
-    // TODO: implement a more useful drain for OrderedSet
     pub fn drain(&mut self) -> Drain<'_, T> {
         self.members.drain(..)
     }
