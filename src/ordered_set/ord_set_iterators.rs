@@ -108,7 +108,7 @@ impl<'a, T: Ord + Clone> ToSet<'a, T> for SetIter<'a, T> {}
 impl<'a, T: Ord + Clone> IterSetOperations<'a, T> for SetIter<'a, T> {}
 
 macro_rules! impl_op_for_set_iter {
-    ( $op:ident, $op_fn:ident, $output:ident ) => {
+    ( $op:ident, $op_fn:ident, $output:ident, $doc:meta ) => {
         impl<'a, T, I> $op<I> for SetIter<'a, T>
         where
             T: Ord,
@@ -117,6 +117,7 @@ macro_rules! impl_op_for_set_iter {
         {
             type Output = $output<'a, T, Self, I>;
 
+            #[$doc]
             fn $op_fn(self, other: I) -> Self::Output {
                 $output::new(self, other)
             }
@@ -124,10 +125,38 @@ macro_rules! impl_op_for_set_iter {
     };
 }
 
-impl_op_for_set_iter!(BitOr, bitor, Union);
-impl_op_for_set_iter!(BitAnd, bitand, Intersection);
-impl_op_for_set_iter!(BitXor, bitxor, SymmetricDifference);
-impl_op_for_set_iter!(Sub, sub, Difference);
+impl_op_for_set_iter!(
+    BitOr,
+    bitor,
+    Union,
+    doc = "Return a new ordered iterator orver the set union of the contents
+    of this iterator and other i.e. elements that appear in this iterator
+    or other."
+);
+impl_op_for_set_iter!(
+    BitAnd,
+    bitand,
+    Intersection,
+    doc = "Return a new ordered iterator orver the set intersection of the contents
+    of this iterator and other i.e. elements that appear in both this iterator
+    and other."
+);
+impl_op_for_set_iter!(
+    BitXor,
+    bitxor,
+    SymmetricDifference,
+    doc = "Return a new ordered iterator orver the symmetric set difference
+    between the contents of this iterator and other i.e. elements that appear
+    in this iterator or other but not both."
+);
+impl_op_for_set_iter!(
+    Sub,
+    sub,
+    Difference,
+    doc = "Return a new ordered iterator orver the set difference of the contents
+    of this iterator and other i.e. elements that appear in this iterator
+    but not other."
+);
 
 pub trait IterSetOperations<'a, T>: SkipAheadIterator<'a, T> + Sized
 where
@@ -280,7 +309,7 @@ where
 }
 
 macro_rules! impl_op_for_iterator {
-    ( $iterator:ident, $op:ident, $op_fn:ident, $output:ident ) => {
+    ( $iterator:ident, $op:ident, $op_fn:ident, $output:ident, $doc:meta, ) => {
         impl<'a, T, L, R, I> $op<I> for $iterator<'a, T, L, R>
         where
             T: Ord,
@@ -291,6 +320,7 @@ macro_rules! impl_op_for_iterator {
         {
             type Output = $output<'a, T, Self, I>;
 
+            #[$doc]
             fn $op_fn(self, other: I) -> Self::Output {
                 $output::new(self, other)
             }
@@ -351,10 +381,42 @@ macro_rules! define_set_op_iterator {
         {
         }
 
-        impl_op_for_iterator!($iter, BitOr, bitor, Union);
-        impl_op_for_iterator!($iter, BitAnd, bitand, Intersection);
-        impl_op_for_iterator!($iter, BitXor, bitxor, SymmetricDifference);
-        impl_op_for_iterator!($iter, Sub, sub, Difference);
+        impl_op_for_iterator!(
+            $iter,
+            BitOr,
+            bitor,
+            Union,
+            doc = "Apply the | operator to return a new ordered iterator
+        over the union of this iteratro and other
+        i.e. the elements that are in this iterator or in other.",
+        );
+        impl_op_for_iterator!(
+            $iter,
+            BitAnd,
+            bitand,
+            Intersection,
+            doc = "Apply the & operator to return a new ordered iterator
+        over the intersection of this iterator and other i.e. the
+        elements that are in both this set and in other.",
+        );
+        impl_op_for_iterator!(
+            $iter,
+            BitXor,
+            bitxor,
+            SymmetricDifference,
+            doc = "Apply the ^ operator to return a new ordered iterator over
+        the symmetric set difference between this iterator and other
+        i.e. the elements that are in this iterator or in other but not in both.",
+        );
+        impl_op_for_iterator!(
+            $iter,
+            Sub,
+            sub,
+            Difference,
+            doc = "Apply the - operator to return a new ordered iterator over
+        the set difference between this set and other i.e. the elements
+        that are in this iterator but not in other.",
+        );
     };
 }
 

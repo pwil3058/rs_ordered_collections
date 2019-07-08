@@ -227,7 +227,7 @@ macro_rules! define_set_operation {
 
 define_set_operation!(
     Difference,
-    doc = "Return an iterator over the set difference between this set and other
+    doc = "Return an ordered iterator over the set difference between this set and other
     i.e. the elements that are in this set but not in other.",
     difference,
     doc = "Apply the - operator to return a new set containing the set difference
@@ -237,7 +237,7 @@ define_set_operation!(
 );
 define_set_operation!(
     SymmetricDifference,
-    doc = "Return an iterator over the symmetric set difference between this set and other
+    doc = "Return an ordered iterator over the symmetric set difference between this set and other
     i.e. the elements that are in this set or in other but not in both.",
     symmetric_difference,
     doc = "Apply the ^ operator to return a new set containing the symmetric set difference
@@ -247,7 +247,7 @@ define_set_operation!(
 );
 define_set_operation!(
     Union,
-    doc = "Return an iterator over the union of this set and other
+    doc = "Return an ordered iterator over the union of this set and other
     i.e. the elements that are in this set or other.",
     union,
     doc = "Apply the | operator to return a new set containing the union of this set and other
@@ -257,11 +257,11 @@ define_set_operation!(
 );
 define_set_operation!(
     Intersection,
-    doc = "Return an iterator over the intersection of this set and other
+    doc = "Return an ordered iterator over the intersection of this set and other
     i.e. the elements that are in both this set and other.",
     intersection,
-    doc = "Apply the & operator to return a new set containing the intersection of this set and other
-    i.e. the elements that are in both this set and in other.",
+    doc = "Apply the & operator to return a new set containing the intersection
+    of this set and other i.e. the elements that are in both this set and in other.",
     BitAnd,
     bitand
 );
