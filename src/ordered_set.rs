@@ -12,7 +12,7 @@ pub mod ord_set_iterators;
 
 use self::ord_set_iterators::{
     a_proper_superset_b, a_superset_b, are_disjoint, Difference, Intersection, SetIter,
-    SkipAheadIterator, SymmetricDifference, ToSet, Union,
+    SymmetricDifference, ToSet, Union,
 };
 
 use crate::OrderedMap;
@@ -157,7 +157,6 @@ impl<T: Ord + Clone> From<&[T]> for OrderedSet<T> {
         vec.sort();
         vec.dedup();
         Self { members: vec }
-
     }
 }
 
@@ -196,20 +195,13 @@ impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for OrderedSet<T> {
 
 // TODO: add doc strings to arguments for these macros.
 macro_rules! define_set_operation {
-    ( $iter:ident, $function:ident, $osi_function:ident, $op:ident, $op_fn:ident  ) => {
+    ( $iter:ident, $function:ident, $op:ident, $op_fn:ident ) => {
         impl<T: Ord> OrderedSet<T> {
             pub fn $function<'a>(
                 &'a self,
                 other: &'a Self,
             ) -> $iter<'a, T, SetIter<'a, T>, SetIter<'a, T>> {
                 $iter::new(self.iter(), other.iter())
-            }
-
-            pub fn $osi_function<'a, I>(&'a self, other_iter: I) -> $iter<'a, T, SetIter<'a, T>, I>
-            where
-                I: SkipAheadIterator<'a, T> + Sized,
-            {
-                $iter::new(self.iter(), other_iter)
             }
         }
 
@@ -231,34 +223,10 @@ macro_rules! define_set_operation {
     };
 }
 
-define_set_operation!(Difference, difference, osi_difference, Sub, sub);
-define_set_operation!(
-    SymmetricDifference,
-    symmetric_difference,
-    osi_symmetric_difference,
-    BitXor,
-    bitxor
-);
-define_set_operation!(Union, union, osi_union, BitOr, bitor);
-define_set_operation!(Intersection, intersection, osi_intersection, BitAnd, bitand);
-
-macro_rules! define_set_map_operation {
-    ( $iter:ident, $function:ident ) => {
-        impl<T: Ord> OrderedSet<T> {
-            pub fn $function<'a, V>(
-                &'a self,
-                other: &'a OrderedMap<T, V>,
-            ) -> $iter<'a, T, SetIter<'_, T>, SetIter<'_, T>> {
-                $iter::new(self.iter(), other.keys())
-            }
-        }
-    };
-}
-
-define_set_map_operation!(Union, map_union);
-define_set_map_operation!(Intersection, map_intersection);
-define_set_map_operation!(Difference, map_difference);
-define_set_map_operation!(SymmetricDifference, map_symmetric_difference);
+define_set_operation!(Difference, difference, Sub, sub);
+define_set_operation!(SymmetricDifference, symmetric_difference, BitXor, bitxor);
+define_set_operation!(Union, union, BitOr, bitor);
+define_set_operation!(Intersection, intersection, BitAnd, bitand);
 
 #[cfg(test)]
 mod tests {
@@ -268,7 +236,7 @@ mod tests {
     use super::*;
     use rand::prelude::*;
 
-    use crate::ordered_set::ord_set_iterators::ToList;
+    use crate::ordered_set::ord_set_iterators::{SkipAheadIterator, ToList};
 
     static TEST_STRS: &[&str] = &[
         "hhh", "aaa", "ggg", "sss", "zzz", "bbb", "fff", "iii", "qqq", "jjj", "ddd", "eee", "ccc",
@@ -495,6 +463,9 @@ mod tests {
             TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         let expected: OrderedSet<String> =
             TEST_STRS[0..4].into_iter().map(|s| s.to_string()).collect();
+        let result = &str_set1 - &str_set2;
+        assert!(result.is_valid());
+        assert_eq!(expected, result);
         let result = str_set1 - str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
@@ -511,6 +482,9 @@ mod tests {
         for item in TEST_STRS[8..].into_iter().map(|s| s.to_string()) {
             expected.insert(item);
         }
+        let result = &str_set1 ^ &str_set2;
+        assert!(result.is_valid());
+        assert_eq!(expected, result);
         let result = str_set1 ^ str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
@@ -524,6 +498,9 @@ mod tests {
             TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         let expected: OrderedSet<String> =
             TEST_STRS[0..].into_iter().map(|s| s.to_string()).collect();
+        let result = &str_set1 | &str_set2;
+        assert!(result.is_valid());
+        assert_eq!(expected, result);
         let result = str_set1 | str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
@@ -537,6 +514,9 @@ mod tests {
             TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         let expected: OrderedSet<String> =
             TEST_STRS[4..8].into_iter().map(|s| s.to_string()).collect();
+        let result = &str_set1 & &str_set2;
+        assert!(result.is_valid());
+        assert_eq!(expected, result);
         let result = str_set1 & str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
