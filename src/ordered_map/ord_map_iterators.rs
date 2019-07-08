@@ -18,6 +18,7 @@ macro_rules! from_index {
 
 use std::cmp::Ordering;
 use std::marker::PhantomData;
+use std::ops::BitOr;
 use std::slice::IterMut;
 
 use crate::OrderedMap;
@@ -868,6 +869,38 @@ where
 {
 }
 
+impl<'a, K, V, L, R, I> BitOr<I> for MapMergeIter<'a, K, V, L, R>
+where
+    K: 'a + Ord + Clone,
+    V: 'a + Clone,
+    L: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
+    R: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
+    I: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
+{
+    type Output = MapMergeIter<'a, K, V, Self, I>;
+
+    /// Apply | operator and return a new ordered iterator over the
+    /// contents of this iterator and other.
+    fn bitor(self, other: I) -> Self::Output {
+        self.merge(other)
+    }
+}
+
+impl<'a, K, V, I> BitOr<I> for MapIter<'a, K, V>
+where
+    K: 'a + Ord + Clone,
+    V: 'a + Clone,
+    I: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
+{
+    type Output = MapMergeIter<'a, K, V, Self, I>;
+
+    /// Apply | operator and return a new ordered iterator over the
+    /// contents of this iterator and other.
+    fn bitor(self, other: I) -> Self::Output {
+        self.merge(other)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -955,6 +988,12 @@ mod tests {
         let map_iter_1 = MapIter::new(LIST_1, VALUES_1);
         let map_iter_2 = MapIter::new(LIST_2, VALUES_2);
         let map = map_iter_0.merge(map_iter_1.merge(map_iter_2)).to_map();
+        assert!(map.is_valid());
+        assert_eq!(LIST.len() + LIST_1.len() + LIST_2.len(), map.len());
+        let map_iter_0 = MapIter::new(LIST, VALUES);
+        let map_iter_1 = MapIter::new(LIST_1, VALUES_1);
+        let map_iter_2 = MapIter::new(LIST_2, VALUES_2);
+        let map = (map_iter_0 | map_iter_1 | map_iter_2).to_map();
         assert!(map.is_valid());
         assert_eq!(LIST.len() + LIST_1.len() + LIST_2.len(), map.len());
     }

@@ -353,6 +353,9 @@ mod tests {
         let merged = map1.merge(&map2).to_map();
         assert_eq!(map1.len() + map2.len(), merged.len());
         assert!(merged.is_valid());
+        let merged = (map1.iter() | map2.iter()).to_map();
+        assert_eq!(map1.len() + map2.len(), merged.len());
+        assert!(merged.is_valid());
     }
 
     #[test]
