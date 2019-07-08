@@ -18,6 +18,7 @@ macro_rules! from_index {
 
 use std::cmp::Ordering;
 use std::marker::PhantomData;
+use std::ops::{BitAnd, BitOr, BitXor, Sub};
 
 use crate::OrderedSet;
 
@@ -66,7 +67,7 @@ pub struct SetIter<'a, T: Ord> {
 }
 
 impl<'a, T: Ord> SetIter<'a, T> {
-    pub fn new(elements: &'a [T]) -> Self {
+    pub(crate) fn new(elements: &'a [T]) -> Self {
         Self { elements, index: 0 }
     }
 }
@@ -105,6 +106,28 @@ impl<'a, T: Ord + Clone> ToList<'a, T> for SetIter<'a, T> {}
 impl<'a, T: Ord + Clone> ToSet<'a, T> for SetIter<'a, T> {}
 
 impl<'a, T: Ord + Clone> IterSetOperations<'a, T> for SetIter<'a, T> {}
+
+macro_rules! impl_op_for_set_iter {
+    ( $op:ident, $op_fn:ident, $output:ident ) => {
+        impl<'a, T, I> $op<I> for SetIter<'a, T>
+        where
+            T: Ord,
+            Self: Sized,
+            I: SkipAheadIterator<'a, T>,
+        {
+            type Output = $output<'a, T, Self, I>;
+
+            fn $op_fn(self, other: I) -> Self::Output {
+                $output::new(self, other)
+            }
+        }
+    };
+}
+
+impl_op_for_set_iter!(BitOr, bitor, Union);
+impl_op_for_set_iter!(BitAnd, bitand, Intersection);
+impl_op_for_set_iter!(BitXor, bitxor, SymmetricDifference);
+impl_op_for_set_iter!(Sub, sub, Difference);
 
 pub trait IterSetOperations<'a, T>: SkipAheadIterator<'a, T> + Sized
 where
@@ -256,6 +279,25 @@ where
     result
 }
 
+macro_rules! impl_op_for_iterator {
+    ( $iterator:ident, $op:ident, $op_fn:ident, $output:ident ) => {
+        impl<'a, T, L, R, I> $op<I> for $iterator<'a, T, L, R>
+        where
+            T: Ord,
+            Self: Sized,
+            L: SkipAheadIterator<'a, T>,
+            R: SkipAheadIterator<'a, T>,
+            I: SkipAheadIterator<'a, T>,
+        {
+            type Output = $output<'a, T, Self, I>;
+
+            fn $op_fn(self, other: I) -> Self::Output {
+                $output::new(self, other)
+            }
+        }
+    };
+}
+
 macro_rules! define_set_op_iterator {
     ( $doc:meta, $iter:ident ) => {
         #[$doc]
@@ -276,7 +318,7 @@ macro_rules! define_set_op_iterator {
             L: SkipAheadIterator<'a, T>,
             R: SkipAheadIterator<'a, T>,
         {
-            pub fn new(l_iter: L, r_iter: R) -> Self {
+            pub(crate) fn new(l_iter: L, r_iter: R) -> Self {
                 Self {
                     l_iter: l_iter,
                     r_iter: r_iter,
@@ -308,6 +350,11 @@ macro_rules! define_set_op_iterator {
             R: SkipAheadIterator<'a, T>,
         {
         }
+
+        impl_op_for_iterator!($iter, BitOr, bitor, Union);
+        impl_op_for_iterator!($iter, BitAnd, bitand, Intersection);
+        impl_op_for_iterator!($iter, BitXor, bitxor, SymmetricDifference);
+        impl_op_for_iterator!($iter, Sub, sub, Difference);
     };
 }
 
@@ -941,5 +988,30 @@ mod tests {
             .to_set();
         let vec: Vec<&str> = set.iter().to_list();
         assert_eq!(vec, vec!["c", "d", "e", "f"]);
+    }
+
+    #[test]
+    fn set_iter_operators() {
+        let i1 = SetIter::new(&["a", "d", "f", "h", "k"]);
+        let i2 = SetIter::new(&["b", "d", "h", "i", "j", "k"]);
+        assert_eq!(
+            (i1 | i2).to_list(),
+            &["a", "b", "d", "f", "h", "i", "j", "k"]
+        );
+        let i1 = SetIter::new(&["a", "d", "f", "h", "k"]);
+        let i2 = SetIter::new(&["b", "d", "h", "i", "j", "k"]);
+        assert_eq!((i1 & i2).to_list(), &["d", "h", "k"]);
+        let i1 = SetIter::new(&["a", "d", "f", "h", "k"]);
+        let i2 = SetIter::new(&["b", "d", "h", "i", "j", "k"]);
+        assert_eq!((i1 ^ i2).to_list(), &["a", "b", "f", "i", "j"]);
+        let i1 = SetIter::new(&["a", "d", "f", "h", "k"]);
+        let i2 = SetIter::new(&["b", "d", "h", "i", "j", "k"]);
+        let i3 = SetIter::new(&["a", "c", "h", "k", "l", "m"]);
+        let i4 = SetIter::new(&["a", "d", "e", "i", "k", "l"]);
+        let i5 = SetIter::new(&["b", "d", "h", "i", "j", "k"]);
+        assert_eq!(
+            (((i1 | i2) & i3) ^ (i4 - i5)).to_list(),
+            &["e", "h", "k", "l"]
+        );
     }
 }
