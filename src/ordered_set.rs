@@ -11,11 +11,9 @@ use std::vec::Drain;
 pub mod ord_set_iterators;
 
 use self::ord_set_iterators::{
-    a_proper_superset_b, a_superset_b, are_disjoint, Difference, Intersection, SetIter,
-    SymmetricDifference, ToSet, Union,
+    a_superset_b, are_disjoint, Difference, Intersection, SetIter, SymmetricDifference, ToSet,
+    Union,
 };
-
-use crate::OrderedMap;
 
 /// An set of items of type T ordered according to Ord (with no duplicates)
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -115,31 +113,6 @@ impl<T: Ord> OrderedSet<T> {
     /// Return true if self is a superset of other
     pub fn is_proper_superset(&self, other: &Self) -> bool {
         self.len() > other.len() && a_superset_b(self.iter(), other.iter())
-    }
-
-    /// Return true if this OrderedSet is disjoint from the set of keys in the given OrderedMap
-    pub fn is_map_disjoint<V>(&self, other: &OrderedMap<T, V>) -> bool {
-        are_disjoint(self.iter(), other.keys())
-    }
-
-    /// Return true if this Ordered Set is a proper subset of the set of keys in the given OrderedMap
-    pub fn is_map_proper_subset<V>(&self, other: &OrderedMap<T, V>) -> bool {
-        a_proper_superset_b(other.keys(), self.iter())
-    }
-
-    /// Return true if this Ordered Set is a proper superset of the set of keys in the given OrderedMap
-    pub fn is_map_proper_superset<V>(&self, other: &OrderedMap<T, V>) -> bool {
-        a_proper_superset_b(self.iter(), other.keys())
-    }
-
-    /// Return true if this Ordered Set is a subset of the set of keys in the given OrderedMap
-    pub fn is_map_subset<V>(&self, other: &OrderedMap<T, V>) -> bool {
-        a_superset_b(other.keys(), self.iter())
-    }
-
-    /// Return true if this Ordered Set is a superset of the set of keys in the given OrderedMap
-    pub fn is_map_superset<V>(&self, other: &OrderedMap<T, V>) -> bool {
-        are_disjoint(self.iter(), other.keys())
     }
 }
 
