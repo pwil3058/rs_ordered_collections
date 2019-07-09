@@ -377,11 +377,11 @@ mod tests {
     #[test]
     fn iter_after_works() {
         let str_set: OrderedSet<String> = TEST_STRS.into_iter().map(|s| s.to_string()).collect();
-        for item in str_set.iter().skip_past(&"jjj".to_string()) {
+        for item in str_set.iter().advance_past(&"jjj".to_string()) {
             assert!(item > &"jjj".to_string());
             assert!(TEST_STRS.contains(&item.as_str()));
         }
-        for item in str_set.iter().skip_past(&"zzz".to_string()) {
+        for item in str_set.iter().advance_past(&"zzz".to_string()) {
             assert!(item > &"zzz".to_string());
             assert!(false);
         }

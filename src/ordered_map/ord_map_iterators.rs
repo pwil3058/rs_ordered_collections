@@ -25,18 +25,20 @@ use crate::OrderedMap;
 
 use crate::ordered_set::ord_set_iterators::SkipAheadIterator;
 
-/// Iterator enhancement to provide a skip ahead feature. This mechanism
+/// Iterator enhancement to provide peek and advance ahead features. This mechanism
 /// is used to optimise implementation of set like operation (except, only, etc)
 /// filters.
 pub trait SkipAheadMapIterator<'a, K: 'a + Ord, I: 'a>: Iterator<Item = I> {
-    /// Peek at the next key in the iterator
+    /// Peek at the next key in the iterator without advancing the iterator.
     fn peek_key(&mut self) -> Option<&'a K>;
 
-    /// Skip ahead to the next item in the iterator with a key after the given key.
-    fn skip_past_key(&mut self, key: &K) -> &mut Self;
+    /// Advance this iterator to the next item with a key after the given key
+    /// and return a pointer to this iterator.
+    fn advance_past_key(&mut self, key: &K) -> &mut Self;
 
-    /// Skip ahead to the item in the iterator with a key at or after the given key.
-    fn skip_until_key(&mut self, key: &K) -> &mut Self;
+    /// Advance this iterator to the next item with a key at or after the given key
+    /// and return a pointer to this iterator.
+    fn advance_until_key(&mut self, key: &K) -> &mut Self;
 }
 
 pub trait ToMap<'a, K, V>: Iterator<Item = (&'a K, &'a V)>
@@ -91,12 +93,12 @@ impl<'a, K: Ord, V> Iterator for MapIter<'a, K, V> {
 }
 
 impl<'a, K: 'a + Ord, V: 'a> SkipAheadMapIterator<'a, K, (&'a K, &'a V)> for MapIter<'a, K, V> {
-    fn skip_past_key(&mut self, k: &K) -> &mut Self {
+    fn advance_past_key(&mut self, k: &K) -> &mut Self {
         self.index += after_index!(self.keys[self.index..], k);
         self
     }
 
-    fn skip_until_key(&mut self, k: &K) -> &mut Self {
+    fn advance_until_key(&mut self, k: &K) -> &mut Self {
         self.index += from_index!(self.keys[self.index..], k);
         self
     }
@@ -194,7 +196,7 @@ where
                             return self.l_iter.next();
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_key);
+                            self.r_iter.advance_until(&l_key);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -217,15 +219,15 @@ where
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
     R: SkipAheadIterator<'a, K>,
 {
-    fn skip_past_key(&mut self, key: &K) -> &mut Self {
-        self.l_iter.skip_past_key(key);
-        self.r_iter.skip_past(key);
+    fn advance_past_key(&mut self, key: &K) -> &mut Self {
+        self.l_iter.advance_past_key(key);
+        self.r_iter.advance_past(key);
         self
     }
 
-    fn skip_until_key(&mut self, key: &K) -> &mut Self {
-        self.l_iter.skip_until_key(key);
-        self.r_iter.skip_until(key);
+    fn advance_until_key(&mut self, key: &K) -> &mut Self {
+        self.l_iter.advance_until_key(key);
+        self.r_iter.advance_until(key);
         self
     }
 
@@ -238,7 +240,7 @@ where
                             return Some(l_key);
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_key);
+                            self.r_iter.advance_until(&l_key);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -284,10 +286,10 @@ where
                 if let Some(r_item) = self.r_iter.peek() {
                     match l_key.cmp(&r_item) {
                         Ordering::Less => {
-                            self.l_iter.skip_until_key(&r_item);
+                            self.l_iter.advance_until_key(&r_item);
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_key);
+                            self.r_iter.advance_until(&l_key);
                         }
                         Ordering::Equal => {
                             self.r_iter.next();
@@ -310,15 +312,15 @@ where
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
     R: SkipAheadIterator<'a, K>,
 {
-    fn skip_past_key(&mut self, key: &K) -> &mut Self {
-        self.l_iter.skip_past_key(key);
-        self.r_iter.skip_past(key);
+    fn advance_past_key(&mut self, key: &K) -> &mut Self {
+        self.l_iter.advance_past_key(key);
+        self.r_iter.advance_past(key);
         self
     }
 
-    fn skip_until_key(&mut self, key: &K) -> &mut Self {
-        self.l_iter.skip_until_key(key);
-        self.r_iter.skip_until(key);
+    fn advance_until_key(&mut self, key: &K) -> &mut Self {
+        self.l_iter.advance_until_key(key);
+        self.r_iter.advance_until(key);
         self
     }
 
@@ -328,10 +330,10 @@ where
                 if let Some(r_item) = self.r_iter.peek() {
                     match l_key.cmp(&r_item) {
                         Ordering::Less => {
-                            self.l_iter.skip_until_key(&r_item);
+                            self.l_iter.advance_until_key(&r_item);
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_key);
+                            self.r_iter.advance_until(&l_key);
                         }
                         Ordering::Equal => {
                             return Some(l_key);
@@ -393,8 +395,8 @@ impl<'a, K: Ord, V> Iterator for MapIterMut<'a, K, V> {
 impl<'a, K: 'a + Ord, V: 'a> SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>
     for MapIterMut<'a, K, V>
 {
-    /// Skip ahead to the item in the iterator after the selector key.
-    fn skip_past_key(&mut self, k: &K) -> &mut Self {
+    /// Advance to the item in the iterator after the selector key.
+    fn advance_past_key(&mut self, k: &K) -> &mut Self {
         let index_incr = after_index!(self.keys[self.index..], k);
         for _ in 0..index_incr {
             self.iter_mut.next();
@@ -403,8 +405,8 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>
         self
     }
 
-    /// Skip ahead to the item in the iterator at or after the selector key.
-    fn skip_until_key(&mut self, k: &K) -> &mut Self {
+    /// Advance to the item in the iterator at or after the selector key.
+    fn advance_until_key(&mut self, k: &K) -> &mut Self {
         let index_incr = from_index!(self.keys[self.index..], k);
         for _ in 0..index_incr {
             self.iter_mut.next();
@@ -491,7 +493,7 @@ where
                             return self.l_iter.next();
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_key);
+                            self.r_iter.advance_until(&l_key);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -515,15 +517,15 @@ where
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>,
     R: SkipAheadIterator<'a, K>,
 {
-    fn skip_past_key(&mut self, key: &K) -> &mut Self {
-        self.l_iter.skip_past_key(key);
-        self.r_iter.skip_past(key);
+    fn advance_past_key(&mut self, key: &K) -> &mut Self {
+        self.l_iter.advance_past_key(key);
+        self.r_iter.advance_past(key);
         self
     }
 
-    fn skip_until_key(&mut self, key: &K) -> &mut Self {
-        self.l_iter.skip_until_key(key);
-        self.r_iter.skip_until(key);
+    fn advance_until_key(&mut self, key: &K) -> &mut Self {
+        self.l_iter.advance_until_key(key);
+        self.r_iter.advance_until(key);
         self
     }
 
@@ -536,7 +538,7 @@ where
                             return Some(l_key);
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_key);
+                            self.r_iter.advance_until(&l_key);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -574,10 +576,10 @@ where
                 if let Some(r_item) = self.r_iter.peek() {
                     match l_key.cmp(&r_item) {
                         Ordering::Less => {
-                            self.l_iter.skip_until_key(&r_item);
+                            self.l_iter.advance_until_key(&r_item);
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_key);
+                            self.r_iter.advance_until(&l_key);
                         }
                         Ordering::Equal => {
                             self.r_iter.next();
@@ -601,15 +603,15 @@ where
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>,
     R: SkipAheadIterator<'a, K>,
 {
-    fn skip_past_key(&mut self, key: &K) -> &mut Self {
-        self.l_iter.skip_past_key(key);
-        self.r_iter.skip_past(key);
+    fn advance_past_key(&mut self, key: &K) -> &mut Self {
+        self.l_iter.advance_past_key(key);
+        self.r_iter.advance_past(key);
         self
     }
 
-    fn skip_until_key(&mut self, key: &K) -> &mut Self {
-        self.l_iter.skip_until_key(key);
-        self.r_iter.skip_until(key);
+    fn advance_until_key(&mut self, key: &K) -> &mut Self {
+        self.l_iter.advance_until_key(key);
+        self.r_iter.advance_until(key);
         self
     }
 
@@ -619,10 +621,10 @@ where
                 if let Some(r_item) = self.r_iter.peek() {
                     match l_key.cmp(&r_item) {
                         Ordering::Less => {
-                            self.l_iter.skip_until_key(&r_item);
+                            self.l_iter.advance_until_key(&r_item);
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_key);
+                            self.r_iter.advance_until(&l_key);
                         }
                         Ordering::Equal => {
                             return Some(l_key);
@@ -678,12 +680,12 @@ impl<'a, K: Ord, V> Iterator for ValueIter<'a, K, V> {
 }
 
 impl<'a, K: Ord, V> SkipAheadMapIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
-    fn skip_past_key(&mut self, k: &K) -> &mut Self {
+    fn advance_past_key(&mut self, k: &K) -> &mut Self {
         self.index += after_index!(self.keys[self.index..], k);
         self
     }
 
-    fn skip_until_key(&mut self, k: &K) -> &mut Self {
+    fn advance_until_key(&mut self, k: &K) -> &mut Self {
         self.index += from_index!(self.keys[self.index..], k);
         self
     }
@@ -727,9 +729,9 @@ impl<'a, K: Ord, V> Iterator for ValueIterMut<'a, K, V> {
 }
 
 impl<'a, K: Ord, V: 'a> SkipAheadMapIterator<'a, K, &'a mut V> for ValueIterMut<'a, K, V> {
-    /// Skip ahead past items in the iterator whose keys are less than
+    /// Advance past items in the iterator whose keys are less than
     /// or equal to the given key
-    fn skip_past_key(&mut self, k: &K) -> &mut Self {
+    fn advance_past_key(&mut self, k: &K) -> &mut Self {
         let index_incr = after_index!(self.keys[self.index..], k);
         for _ in 0..index_incr {
             self.iter_mut.next();
@@ -738,9 +740,9 @@ impl<'a, K: Ord, V: 'a> SkipAheadMapIterator<'a, K, &'a mut V> for ValueIterMut<
         self
     }
 
-    /// Skip ahead past items in the iterator whose keys are less than
+    /// Advance past items in the iterator whose keys are less than
     /// the given key
-    fn skip_until_key(&mut self, k: &K) -> &mut Self {
+    fn advance_until_key(&mut self, k: &K) -> &mut Self {
         let index_incr = from_index!(self.keys[self.index..], k);
         for _ in 0..index_incr {
             self.iter_mut.next();
@@ -837,15 +839,15 @@ where
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
     R: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
 {
-    fn skip_past_key(&mut self, k: &K) -> &mut Self {
-        self.l_iter.skip_past_key(k);
-        self.r_iter.skip_past_key(k);
+    fn advance_past_key(&mut self, k: &K) -> &mut Self {
+        self.l_iter.advance_past_key(k);
+        self.r_iter.advance_past_key(k);
         self
     }
 
-    fn skip_until_key(&mut self, k: &K) -> &mut Self {
-        self.l_iter.skip_until_key(k);
-        self.r_iter.skip_until_key(k);
+    fn advance_until_key(&mut self, k: &K) -> &mut Self {
+        self.l_iter.advance_until_key(k);
+        self.r_iter.advance_until_key(k);
         self
     }
 
@@ -1013,15 +1015,15 @@ where
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>,
     R: SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>,
 {
-    fn skip_past_key(&mut self, k: &K) -> &mut Self {
-        self.l_iter.skip_past_key(k);
-        self.r_iter.skip_past_key(k);
+    fn advance_past_key(&mut self, k: &K) -> &mut Self {
+        self.l_iter.advance_past_key(k);
+        self.r_iter.advance_past_key(k);
         self
     }
 
-    fn skip_until_key(&mut self, k: &K) -> &mut Self {
-        self.l_iter.skip_until_key(k);
-        self.r_iter.skip_until_key(k);
+    fn advance_until_key(&mut self, k: &K) -> &mut Self {
+        self.l_iter.advance_until_key(k);
+        self.r_iter.advance_until_key(k);
         self
     }
 
@@ -1117,18 +1119,18 @@ mod tests {
     ];
 
     #[test]
-    fn skip_past_key_works() {
+    fn advance_past_key_works() {
         assert_eq!(
-            MapIter::new(LIST, VALUES).skip_past_key(&"g").next(),
+            MapIter::new(LIST, VALUES).advance_past_key(&"g").next(),
             Some((&"i", &2))
         );
         assert_eq!(
-            MapIter::new(LIST, VALUES).skip_past_key(&"f").next(),
+            MapIter::new(LIST, VALUES).advance_past_key(&"f").next(),
             Some((&"g", &3))
         );
         assert_eq!(
             MapIter::new(LIST, VALUES)
-                .skip_past_key(&"g")
+                .advance_past_key(&"g")
                 .to_map()
                 .len(),
             3
@@ -1136,18 +1138,18 @@ mod tests {
     }
 
     #[test]
-    fn skip_until_works() {
+    fn advance_until_works() {
         assert_eq!(
-            MapIter::new(LIST, VALUES).skip_until_key(&"g").next(),
+            MapIter::new(LIST, VALUES).advance_until_key(&"g").next(),
             Some((&"g", &3))
         );
         assert_eq!(
-            MapIter::new(LIST, VALUES).skip_until_key(&"f").next(),
+            MapIter::new(LIST, VALUES).advance_until_key(&"f").next(),
             Some((&"g", &3))
         );
         assert_eq!(
             MapIter::new(LIST, VALUES)
-                .skip_until_key(&"f")
+                .advance_until_key(&"f")
                 .to_map()
                 .len(),
             4
@@ -1161,11 +1163,11 @@ mod tests {
         let result: Vec<(&str, i32)> = map_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec);
         let mut map_iter = MapIter::new(LIST, VALUES);
-        assert_eq!(map_iter.skip_past_key(&"g").next(), Some((&"i", &2)));
+        assert_eq!(map_iter.advance_past_key(&"g").next(), Some((&"i", &2)));
         let result: Vec<(&str, i32)> = map_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec[5..].to_vec());
         let mut map_iter = MapIter::new(LIST, VALUES);
-        assert_eq!(map_iter.skip_until_key(&"g").next(), Some((&"g", &3)));
+        assert_eq!(map_iter.advance_until_key(&"g").next(), Some((&"g", &3)));
         let result: Vec<(&str, i32)> = map_iter.map(|(x, y)| (x.clone(), y.clone())).collect();
         assert_eq!(result, vec[4..].to_vec());
     }
@@ -1308,23 +1310,23 @@ mod tests {
         assert_eq!(result, vec);
         assert_eq!(
             ValueIterMut::new(LIST, &mut values)
-                .skip_past_key(&"g")
+                .advance_past_key(&"g")
                 .next(),
             Some(&mut 2_i32)
         );
         let result: Vec<i32> = ValueIterMut::new(LIST, &mut values)
-            .skip_past_key(&"i")
+            .advance_past_key(&"i")
             .map(|x| *x)
             .collect();
         assert_eq!(result, vec[5..].to_vec());
         assert_eq!(
             ValueIterMut::new(LIST, &mut values)
-                .skip_until_key(&"g")
+                .advance_until_key(&"g")
                 .next(),
             Some(&mut 3_i32)
         );
         let result: Vec<i32> = ValueIterMut::new(LIST, &mut values)
-            .skip_past_key(&"g")
+            .advance_past_key(&"g")
             .map(|x| *x)
             .collect();
         assert_eq!(result, vec[4..].to_vec());
@@ -1345,11 +1347,11 @@ mod tests {
         let values: Vec<i32> = ValueIter::new(LIST, VALUES).cloned().collect();
         assert_eq!(values, vec);
         let mut value_iter = ValueIter::new(LIST, VALUES);
-        assert_eq!(value_iter.skip_past_key(&"g").next(), Some(&2_i32));
+        assert_eq!(value_iter.advance_past_key(&"g").next(), Some(&2_i32));
         let values: Vec<i32> = value_iter.cloned().collect();
         assert_eq!(values, vec[5..].to_vec());
         let mut value_iter = ValueIter::new(LIST, VALUES);
-        assert_eq!(value_iter.skip_until_key(&"g").next(), Some(&3_i32));
+        assert_eq!(value_iter.advance_until_key(&"g").next(), Some(&3_i32));
         let values: Vec<i32> = value_iter.cloned().collect();
         assert_eq!(values, vec[4..].to_vec());
     }

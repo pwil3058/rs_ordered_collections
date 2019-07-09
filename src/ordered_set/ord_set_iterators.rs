@@ -22,18 +22,20 @@ use std::ops::{BitAnd, BitOr, BitXor, Sub};
 
 use crate::OrderedSet;
 
-/// Iterator enhancement to provide a skip ahead feature. This mechanism
+/// Iterator enhancement to provide peek and advance ahead features. This mechanism
 /// is used to optimise implementation of set operation (difference, intersection, etc)
 /// iterators.
 pub trait SkipAheadIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
-    /// Peek at the next item in the iterator
+    /// Peek at the next item in the iterator without advancing the iterator.
     fn peek(&mut self) -> Option<&'a T>;
 
-    /// Skip ahead to the next item in the iterator after the given item.
-    fn skip_past(&mut self, t: &T) -> &mut Self;
+    /// Advance this iterator to the next item after the given item and
+    /// return a pointer to this iterator.
+    fn advance_past(&mut self, t: &T) -> &mut Self;
 
-    /// Skip ahead to the next item in the iterator at or after the given item.
-    fn skip_until(&mut self, t: &T) -> &mut Self;
+    /// Advance this iterator to the next item at or after the given item and
+    /// return a pointer to this iterator.
+    fn advance_until(&mut self, t: &T) -> &mut Self;
 }
 
 pub trait ToList<'a, T>: Iterator<Item = &'a T>
@@ -86,12 +88,12 @@ impl<'a, T: Ord> Iterator for SetIter<'a, T> {
 }
 
 impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIter<'a, T> {
-    fn skip_past(&mut self, t: &T) -> &mut Self {
+    fn advance_past(&mut self, t: &T) -> &mut Self {
         self.index += after_index!(self.elements[self.index..], t);
         self
     }
 
-    fn skip_until(&mut self, t: &T) -> &mut Self {
+    fn advance_until(&mut self, t: &T) -> &mut Self {
         self.index += from_index!(self.elements[self.index..], t);
         self
     }
@@ -163,25 +165,25 @@ where
     T: 'a + Ord,
 {
     /// Iterate over the set union of this Iterator and the given Iterator
-    /// in the order defined their elements Ord trait implementation.
+    /// in the order defined by their elements Ord trait implementation.
     fn union<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Union<'a, T, Self, I> {
         Union::new(self, iter)
     }
 
     /// Iterate over the set intersection of this Iterator and the given Iterator
-    /// in the order defined their elements Ord trait implementation.
+    /// in the order defined by their elements Ord trait implementation.
     fn intersection<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Intersection<'a, T, Self, I> {
         Intersection::new(self, iter)
     }
 
     /// Iterate over the set difference of this Iterator and the given Iterator
-    /// in the order defined their elements Ord trait implementation.
+    /// in the order defined by their elements Ord trait implementation.
     fn difference<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Difference<'a, T, Self, I> {
         Difference::new(self, iter)
     }
 
     /// Iterate over the set symmetric difference of this Iterator and the given Iterator
-    /// in the order defined their elements Ord trait implementation.
+    /// in the order defined by their elements Ord trait implementation.
     fn symmetric_difference<I: SkipAheadIterator<'a, T>>(
         self,
         iter: I,
@@ -232,10 +234,10 @@ where
             if let Some(r_element) = r_iter.peek() {
                 match l_element.cmp(&r_element) {
                     Ordering::Less => {
-                        l_iter.skip_until(r_element);
+                        l_iter.advance_until(r_element);
                     }
                     Ordering::Greater => {
-                        r_iter.skip_until(l_element);
+                        r_iter.advance_until(l_element);
                     }
                     Ordering::Equal => {
                         return false;
@@ -264,7 +266,7 @@ where
                     return false;
                 }
                 Ordering::Greater => {
-                    a_iter.skip_until(b_element);
+                    a_iter.advance_until(b_element);
                 }
                 Ordering::Equal => {
                     b_iter.next();
@@ -294,7 +296,7 @@ where
                 }
                 Ordering::Greater => {
                     result = true;
-                    a_iter.skip_until(b_element);
+                    a_iter.advance_until(b_element);
                 }
                 Ordering::Equal => {
                     b_iter.next();
@@ -483,15 +485,15 @@ where
         }
     }
 
-    fn skip_past(&mut self, t: &T) -> &mut Self {
-        self.l_iter.skip_past(t);
-        self.r_iter.skip_past(t);
+    fn advance_past(&mut self, t: &T) -> &mut Self {
+        self.l_iter.advance_past(t);
+        self.r_iter.advance_past(t);
         self
     }
 
-    fn skip_until(&mut self, t: &T) -> &mut Self {
-        self.l_iter.skip_until(t);
-        self.r_iter.skip_until(t);
+    fn advance_until(&mut self, t: &T) -> &mut Self {
+        self.l_iter.advance_until(t);
+        self.r_iter.advance_until(t);
         self
     }
 }
@@ -516,10 +518,10 @@ where
                 if let Some(r_element) = self.r_iter.peek() {
                     match l_element.cmp(&r_element) {
                         Ordering::Less => {
-                            self.l_iter.skip_until(&r_element);
+                            self.l_iter.advance_until(&r_element);
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_element);
+                            self.r_iter.advance_until(&l_element);
                         }
                         Ordering::Equal => {
                             self.r_iter.next();
@@ -548,10 +550,10 @@ where
                 if let Some(r_element) = self.r_iter.peek() {
                     match l_element.cmp(&r_element) {
                         Ordering::Less => {
-                            self.l_iter.skip_until(&r_element);
+                            self.l_iter.advance_until(&r_element);
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_element);
+                            self.r_iter.advance_until(&l_element);
                         }
                         Ordering::Equal => {
                             return Some(l_element);
@@ -566,15 +568,15 @@ where
         }
     }
 
-    fn skip_past(&mut self, t: &T) -> &mut Self {
-        self.l_iter.skip_past(t);
-        self.r_iter.skip_past(t);
+    fn advance_past(&mut self, t: &T) -> &mut Self {
+        self.l_iter.advance_past(t);
+        self.r_iter.advance_past(t);
         self
     }
 
-    fn skip_until(&mut self, t: &T) -> &mut Self {
-        self.l_iter.skip_until(t);
-        self.r_iter.skip_until(t);
+    fn advance_until(&mut self, t: &T) -> &mut Self {
+        self.l_iter.advance_until(t);
+        self.r_iter.advance_until(t);
         self
     }
 }
@@ -602,7 +604,7 @@ where
                             return self.l_iter.next();
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_element);
+                            self.r_iter.advance_until(&l_element);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -634,7 +636,7 @@ where
                             return Some(l_element);
                         }
                         Ordering::Greater => {
-                            self.r_iter.skip_until(&l_element);
+                            self.r_iter.advance_until(&l_element);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -650,15 +652,15 @@ where
         }
     }
 
-    fn skip_past(&mut self, t: &T) -> &mut Self {
-        self.l_iter.skip_past(t);
-        self.r_iter.skip_past(t);
+    fn advance_past(&mut self, t: &T) -> &mut Self {
+        self.l_iter.advance_past(t);
+        self.r_iter.advance_past(t);
         self
     }
 
-    fn skip_until(&mut self, t: &T) -> &mut Self {
-        self.l_iter.skip_until(t);
-        self.r_iter.skip_until(t);
+    fn advance_until(&mut self, t: &T) -> &mut Self {
+        self.l_iter.advance_until(t);
+        self.r_iter.advance_until(t);
         self
     }
 }
@@ -734,15 +736,15 @@ where
         }
     }
 
-    fn skip_past(&mut self, t: &T) -> &mut Self {
-        self.l_iter.skip_past(t);
-        self.r_iter.skip_past(t);
+    fn advance_past(&mut self, t: &T) -> &mut Self {
+        self.l_iter.advance_past(t);
+        self.r_iter.advance_past(t);
         self
     }
 
-    fn skip_until(&mut self, t: &T) -> &mut Self {
-        self.l_iter.skip_until(t);
-        self.r_iter.skip_until(t);
+    fn advance_until(&mut self, t: &T) -> &mut Self {
+        self.l_iter.advance_until(t);
+        self.r_iter.advance_until(t);
         self
     }
 }
@@ -791,25 +793,25 @@ mod tests {
         let vec = LIST.to_vec();
         assert_eq!(SetIter::new(LIST).to_list(), vec);
         let mut set_iter = SetIter::new(LIST);
-        assert_eq!(set_iter.skip_past(&"g").next(), Some(&"i"));
+        assert_eq!(set_iter.advance_past(&"g").next(), Some(&"i"));
         assert_eq!(set_iter.to_list(), vec[5..].to_vec());
         let mut set_iter = SetIter::new(LIST);
-        assert_eq!(set_iter.skip_until(&"g").next(), Some(&"g"));
+        assert_eq!(set_iter.advance_until(&"g").next(), Some(&"g"));
         assert_eq!(set_iter.to_list(), vec[4..].to_vec());
     }
 
     #[test]
-    fn set_iter_skip_past_works() {
-        assert_eq!(SetIter::new(LIST).skip_past(&"g").next(), Some(&"i"));
-        assert_eq!(SetIter::new(LIST).skip_past(&"f").next(), Some(&"g"));
-        assert_eq!(SetIter::new(LIST).skip_past(&"g").to_set().len(), 3);
+    fn set_iter_advance_past_works() {
+        assert_eq!(SetIter::new(LIST).advance_past(&"g").next(), Some(&"i"));
+        assert_eq!(SetIter::new(LIST).advance_past(&"f").next(), Some(&"g"));
+        assert_eq!(SetIter::new(LIST).advance_past(&"g").to_set().len(), 3);
     }
 
     #[test]
-    fn set_iter_skip_until_works() {
-        assert_eq!(SetIter::new(LIST).skip_until(&"g").next(), Some(&"g"));
-        assert_eq!(SetIter::new(LIST).skip_until(&"f").next(), Some(&"g"));
-        assert_eq!(SetIter::new(LIST).skip_until(&"f").to_set().len(), 4);
+    fn set_iter_advance_until_works() {
+        assert_eq!(SetIter::new(LIST).advance_until(&"g").next(), Some(&"g"));
+        assert_eq!(SetIter::new(LIST).advance_until(&"f").next(), Some(&"g"));
+        assert_eq!(SetIter::new(LIST).advance_until(&"f").to_set().len(), 4);
     }
 
     #[test]
@@ -1033,20 +1035,20 @@ mod tests {
     }
 
     #[test]
-    fn union_skip_past_works() {
+    fn union_advance_past_works() {
         let set = Union::new(SetIter::new(&LIST_0[0..3]), SetIter::new(&LIST_2[..2]))
             .symmetric_difference(SetIter::new(&LIST_1[..3]))
-            .skip_past(&"c")
+            .advance_past(&"c")
             .to_set();
         let vec: Vec<&str> = set.iter().to_list();
         assert_eq!(vec, vec!["d", "e", "f"]);
     }
 
     #[test]
-    fn union_skip_until_works() {
+    fn union_advance_until_works() {
         let set = Union::new(SetIter::new(&LIST_0[0..3]), SetIter::new(&LIST_2[..2]))
             .symmetric_difference(SetIter::new(&LIST_1[..3]))
-            .skip_until(&"c")
+            .advance_until(&"c")
             .to_set();
         let vec: Vec<&str> = set.iter().to_list();
         assert_eq!(vec, vec!["c", "d", "e", "f"]);
