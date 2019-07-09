@@ -38,9 +38,10 @@ impl<K: Ord, V> OrderedMap<K, V> {
         Self::default()
     }
 
-    /// Return true if keys is sorted and contains no duplicate keys
-    /// and the same length as values.
-    pub fn is_valid(&self) -> bool {
+    // Return true if keys is sorted and contains no duplicate keys
+    // and the same length as values.
+    #[cfg(test)]
+    pub(crate) fn is_valid(&self) -> bool {
         for i in 1..self.keys.len() {
             if self.keys[i - 1] >= self.keys[i] {
                 return false;
@@ -151,7 +152,6 @@ impl<K: Ord, V> From<Vec<(K, V)>> for OrderedMap<K, V> {
         for (key, value) in list.drain(..) {
             map.insert(key, value);
         }
-        assert!(map.is_valid());
         map
     }
 }
@@ -163,7 +163,6 @@ impl<K: Ord + Clone, V: Clone> From<&[(K, V)]> for OrderedMap<K, V> {
         for (key, value) in list.iter() {
             map.insert(key.clone(), value.clone());
         }
-        assert!(map.is_valid());
         map
     }
 }

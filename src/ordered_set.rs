@@ -80,8 +80,9 @@ impl<T: Ord> OrderedSet<T> {
         self.members.drain(..)
     }
 
-    /// Return true if members is sorted and contains no duplicates
-    pub fn is_valid(&self) -> bool {
+    // Return true if members is sorted and contains no duplicates
+    #[cfg(test)]
+    pub(crate) fn is_valid(&self) -> bool {
         for i in 1..self.members.len() {
             if self.members[i - 1] >= self.members[i] {
                 return false;
