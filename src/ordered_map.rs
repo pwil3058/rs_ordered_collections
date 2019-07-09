@@ -9,7 +9,8 @@ pub mod ord_map_iterators;
 pub use self::map_entry::*;
 
 pub use self::ord_map_iterators::{
-    MapIter, MapIterFilter, MapIterMut, MapMergeIter, ToMap, ValueIter, ValueIterMut,
+    MapIter, MapIterFilter, MapIterMerge, MapIterMut, MapIterMutFilter, MapIterMutMerge,
+    MapMergeIter, MapMergeIterMut, ToMap, ValueIter, ValueIterMut,
 };
 
 pub use crate::ordered_set::ord_set_iterators::{
@@ -77,13 +78,6 @@ impl<K: Ord, V> OrderedMap<K, V> {
 
     pub fn iter(&self) -> MapIter<'_, K, V> {
         MapIter::new(&self.keys, &self.values)
-    }
-
-    pub fn merge<'a>(
-        &'a self,
-        other: &'a Self,
-    ) -> MapMergeIter<'a, K, V, MapIter<'_, K, V>, MapIter<'_, K, V>> {
-        MapMergeIter::new(self.iter(), other.iter())
     }
 
     pub fn iter_mut(&mut self) -> MapIterMut<'_, K, V> {
@@ -350,7 +344,7 @@ mod tests {
     fn map_merge_basic() {
         let map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[..5].into();
         let map2: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[5..].into();
-        let merged = map1.merge(&map2).to_map();
+        let merged = map1.iter().merge(map2.iter()).to_map();
         assert_eq!(map1.len() + map2.len(), merged.len());
         assert!(merged.is_valid());
         let merged = (map1.iter() | map2.iter()).to_map();
@@ -363,7 +357,8 @@ mod tests {
         let map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[..5].into();
         let map2: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[5..].into();
         let merged = map1
-            .merge(&map2)
+            .iter()
+            .merge(map2.iter())
             .except(SetIter::new(&["bbb", "lll", "mmm"]))
             .to_map();
         assert_eq!(map1.len() + map2.len(), merged.len() + 3);
@@ -375,7 +370,8 @@ mod tests {
         let map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[..5].into();
         let map2: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[5..].into();
         let merged = map1
-            .merge(&map2)
+            .iter()
+            .merge(map2.iter())
             .only(SetIter::new(&["bbb", "lll", "mmm"]))
             .to_map();
         assert_eq!(3, merged.len());
@@ -387,6 +383,14 @@ mod tests {
     fn map_merge_overlap_panic() {
         let map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[..5].into();
         let map2: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[3..].into();
-        let _merged = map1.merge(&map2).to_map();
+        let _merged = map1.iter().merge(map2.iter()).to_map();
+    }
+
+    #[test]
+    #[should_panic]
+    fn map_merge_mut_overlap_panic() {
+        let mut map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[..5].into();
+        let mut map2: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0[3..].into();
+        for (_, _) in map1.iter_mut().merge(map2.iter_mut()) {}
     }
 }

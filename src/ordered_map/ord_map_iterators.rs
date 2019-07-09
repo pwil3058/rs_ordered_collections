@@ -1267,18 +1267,25 @@ mod tests {
         let mut map_0 = MapIter::new(LIST, VALUES).to_map();
         let mut map_1 = MapIter::new(LIST_1, VALUES_1).to_map();
         let mut map_2 = MapIter::new(LIST_2, VALUES_2).to_map();
-        for (_, value) in map_0.iter_mut().merge(map_1.iter_mut()).merge(map_2.iter_mut()) {
+        for (_, value) in map_0
+            .iter_mut()
+            .merge(map_1.iter_mut())
+            .merge(map_2.iter_mut())
+        {
             *value = 1024;
-        };
+        }
         assert!(map_0.values().all(|x| *x == 1024));
         assert!(map_1.values().all(|x| *x == 1024));
         assert!(map_2.values().all(|x| *x == 1024));
         let mut map_0 = MapIter::new(LIST, VALUES).to_map();
         let mut map_1 = MapIter::new(LIST_1, VALUES_1).to_map();
         let mut map_2 = MapIter::new(LIST_2, VALUES_2).to_map();
-        for (_, value) in map_0.iter_mut().merge(map_1.iter_mut().merge(map_2.iter_mut())) {
+        for (_, value) in map_0
+            .iter_mut()
+            .merge(map_1.iter_mut().merge(map_2.iter_mut()))
+        {
             *value = 2048;
-        };
+        }
         assert!(map_0.values().all(|x| *x == 2048));
         assert!(map_1.values().all(|x| *x == 2048));
         assert!(map_2.values().all(|x| *x == 2048));
@@ -1287,7 +1294,7 @@ mod tests {
         let mut map_2 = MapIter::new(LIST_2, VALUES_2).to_map();
         for (_, value) in map_0.iter_mut() | map_1.iter_mut() | map_2.iter_mut() {
             *value = 4096;
-        };
+        }
         assert!(map_0.values().all(|x| *x == 4096));
         assert!(map_1.values().all(|x| *x == 4096));
         assert!(map_2.values().all(|x| *x == 4096));
