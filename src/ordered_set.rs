@@ -290,7 +290,7 @@ mod tests {
 
     #[test]
     fn check_constraints() {
-        // This is to chek what constraints are required for T
+        // This is to check what constraints are required for T
         // to give full functionality to the sets
         // Won't compile with Clone.
         #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]

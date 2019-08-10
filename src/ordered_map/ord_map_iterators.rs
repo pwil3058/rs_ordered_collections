@@ -127,7 +127,7 @@ pub trait MapIterFilter<'a, K: 'a + Ord, V: 'a>:
         MapIterExcept::new(self, iter)
     }
 
-    /// Exclude keys not in the given key iteratorn from the output stream.
+    /// Exclude keys not in the given key iterator from the output stream.
     fn only<I: SkipAheadIterator<'a, K>>(self, iter: I) -> MapIterOnly<'a, K, V, Self, I> {
         MapIterOnly::new(self, iter)
     }
@@ -358,14 +358,14 @@ where
 {
 }
 
-// MUT MAP ITERATOR
+// MUTABLE MAP ITERATOR
 
 /// An Iterator over the keys and mutable values in an ordered map in key order
 // Use built in mutable iterator due to insoluble lifetime issues
 pub struct MapIterMut<'a, K: Ord, V> {
     keys: &'a [K],
     index: usize,
-    // NB: use of iter_mut is due unresolvable lifetime issues with obvious solution
+    // NB: use of `iter_mut` is due unsolvable lifetime issues with obvious solution
     iter_mut: IterMut<'a, V>,
 }
 
@@ -428,7 +428,7 @@ pub trait MapIterMutFilter<'a, K: 'a + Ord, V: 'a>:
         MapIterMutExcept::new(self, iter)
     }
 
-    /// Exclude keys not in the given key iteratorn from the output stream.
+    /// Exclude keys not in the given key iterator from the output stream.
     fn only<I: SkipAheadIterator<'a, K>>(self, iter: I) -> MapIterMutOnly<'a, K, V, Self, I> {
         MapIterMutOnly::new(self, iter)
     }
@@ -695,13 +695,13 @@ impl<'a, K: Ord, V> SkipAheadMapIterator<'a, K, &'a V> for ValueIter<'a, K, V> {
     }
 }
 
-// MUT VALUE ITERATOR
+// MUTABLE VALUE ITERATOR
 
 /// An Iterator over the values in an ordered map in key order
 pub struct ValueIterMut<'a, K: Ord, V> {
     keys: &'a [K],
     index: usize,
-    // NB: use of iter_mut is due unresolvable lifetime issues with obvious solution
+    // NB: use of iter_mut is due unsolvable lifetime issues with obvious solution
     iter_mut: IterMut<'a, V>,
 }
 

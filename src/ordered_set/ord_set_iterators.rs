@@ -42,7 +42,7 @@ pub trait ToList<'a, T>: Iterator<Item = &'a T>
 where
     T: 'a + Clone,
 {
-    /// Create a Vec<T> list from the elements in the Iterator's output
+    /// Create a `Vec<T>` list from the elements in the 'Iterator`'s output
     fn to_list(&mut self) -> Vec<T> {
         self.cloned().collect()
     }
@@ -165,13 +165,13 @@ where
     T: 'a + Ord,
 {
     /// Iterate over the set union of this Iterator and the given Iterator
-    /// in the order defined by their elements Ord trait implementation.
+    /// in the order defined by their elements `Ord` trait implementation.
     fn union<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Union<'a, T, Self, I> {
         Union::new(self, iter)
     }
 
     /// Iterate over the set intersection of this Iterator and the given Iterator
-    /// in the order defined by their elements Ord trait implementation.
+    /// in the order defined by their elements `Ord` trait implementation.
     fn intersection<I: SkipAheadIterator<'a, T>>(self, iter: I) -> Intersection<'a, T, Self, I> {
         Intersection::new(self, iter)
     }
