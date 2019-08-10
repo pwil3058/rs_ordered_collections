@@ -69,20 +69,12 @@ impl<K: Ord, V> OrderedMap<K, V> {
         self.values.clear();
     }
 
-    fn binary_search_key<Q>(&self, key: &Q) -> Result<usize, usize>
-    where
-        K: Borrow<Q>,
-        Q: Ord + ?Sized
-    {
-        self.keys.binary_search_by_key(&key, |x| x.borrow())
-    }
-
     pub fn contains_key<Q>(&self, key: &Q) -> bool
     where
         K: Borrow<Q>,
         Q: Ord + ?Sized
     {
-        self.binary_search_key(key).is_ok()
+        self.keys.binary_search_by_key(&key, |x| x.borrow()).is_ok()
     }
 
     // TODO: implement a useful drain for OrderedMap
@@ -115,7 +107,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
         K: Borrow<Q>,
         Q: Ord + ?Sized
     {
-        if let Ok(index) = self.binary_search_key(key) {
+        if let Ok(index) = self.keys.binary_search_by_key(&key, |x| x.borrow()) {
             Some(&self.values[index])
         } else {
             None
@@ -127,7 +119,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
         K: Borrow<Q>,
         Q: Ord + ?Sized
     {
-        if let Ok(index) = self.binary_search_key(key) {
+        if let Ok(index) = self.keys.binary_search_by_key(&key, |x| x.borrow()) {
             Some(&mut self.values[index])
         } else {
             None
@@ -153,7 +145,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
         K: Borrow<Q>,
         Q: Ord + ?Sized
     {
-        match self.binary_search_key(&key) {
+        match self.keys.binary_search_by_key(&key, |x| x.borrow()) {
             Ok(index) => {
                 self.keys.remove(index);
                 Some(self.values.remove(index))
@@ -167,7 +159,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
         K: Borrow<Q>,
         Q: Ord + ?Sized
     {
-        match self.binary_search_key(&key) {
+        match self.keys.binary_search_by_key(&key, |x| x.borrow()) {
             Ok(index) => Some((self.keys.remove(index), self.values.remove(index))),
             Err(_) => None,
         }
