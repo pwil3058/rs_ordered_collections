@@ -2,6 +2,7 @@
 //! Useful for those situations when ordered iteration over a set's
 //! contents is a frequent requirement.
 
+use std::borrow::Borrow;
 use std::convert::From;
 use std::default::Default;
 use std::iter::FromIterator;
@@ -54,8 +55,12 @@ impl<T: Ord> OrderedSet<T> {
     }
 
     /// Return true if the item was a member and false otherwise
-    pub fn remove(&mut self, item: &T) -> bool {
-        if let Ok(index) = self.members.binary_search(item) {
+    pub fn remove<Q>(&mut self, item: &Q) -> bool
+    where
+        T: Borrow<Q>,
+        Q: Ord + ?Sized
+    {
+        if let Ok(index) = self.members.binary_search_by_key(&item, |x| x.borrow()) {
             self.members.remove(index);
             true
         } else {
@@ -64,12 +69,20 @@ impl<T: Ord> OrderedSet<T> {
     }
 
     /// Return false if the item is already a member
-    pub fn contains(&self, item: &T) -> bool {
-        self.members.binary_search(item).is_ok()
+    pub fn contains<Q>(&self, item: &Q) -> bool
+    where
+        T: Borrow<Q>,
+        Q: Ord + ?Sized
+    {
+        self.members.binary_search_by_key(&item, |x| x.borrow()).is_ok()
     }
 
     pub fn first(&self) -> Option<&T> {
         self.members.first()
+    }
+
+    pub fn last(&self) -> Option<&T> {
+        self.members.last()
     }
 
     pub fn iter(&self) -> SetIter<'_, T> {
