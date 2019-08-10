@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::convert::From;
 use std::default::Default;
 use std::ops::{Index, IndexMut};
@@ -68,8 +69,20 @@ impl<K: Ord, V> OrderedMap<K, V> {
         self.values.clear();
     }
 
-    pub fn contains_key(&self, key: &K) -> bool {
-        self.keys.binary_search(key).is_ok()
+    fn binary_search_key<Q>(&self, key: &Q) -> Result<usize, usize>
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized
+    {
+        self.keys.binary_search_by_key(&key, |x| x.borrow())
+    }
+
+    pub fn contains_key<Q>(&self, key: &Q) -> bool
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized
+    {
+        self.binary_search_key(key).is_ok()
     }
 
     // TODO: implement a useful drain for OrderedMap
@@ -97,16 +110,24 @@ impl<K: Ord, V> OrderedMap<K, V> {
         ValueIterMut::new(&self.keys, &mut self.values)
     }
 
-    pub fn get(&self, key: &K) -> Option<&V> {
-        if let Ok(index) = self.keys.binary_search(key) {
+    pub fn get<Q>(&self, key: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized
+    {
+        if let Ok(index) = self.binary_search_key(key) {
             Some(&self.values[index])
         } else {
             None
         }
     }
 
-    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
-        if let Ok(index) = self.keys.binary_search(key) {
+    pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized
+    {
+        if let Ok(index) = self.binary_search_key(key) {
             Some(&mut self.values[index])
         } else {
             None
@@ -127,8 +148,12 @@ impl<K: Ord, V> OrderedMap<K, V> {
         }
     }
 
-    pub fn remove(&mut self, key: &K) -> Option<V> {
-        match self.keys.binary_search(&key) {
+    pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized
+    {
+        match self.binary_search_key(&key) {
             Ok(index) => {
                 self.keys.remove(index);
                 Some(self.values.remove(index))
@@ -137,8 +162,12 @@ impl<K: Ord, V> OrderedMap<K, V> {
         }
     }
 
-    pub fn remove_entry(&mut self, key: &K) -> Option<(K, V)> {
-        match self.keys.binary_search(&key) {
+    pub fn remove_entry<Q>(&mut self, key: &Q) -> Option<(K, V)>
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized
+    {
+        match self.binary_search_key(&key) {
             Ok(index) => Some((self.keys.remove(index), self.values.remove(index))),
             Err(_) => None,
         }
@@ -244,6 +273,14 @@ mod tests {
     }
 
     #[test]
+    fn contains_key() {
+        let map = OrderedMap::<String, u32>::default();
+        let anything = "anything".to_string();
+        assert!(!map.contains_key(&anything));
+        assert!(!map.contains_key("whatever"));
+    }
+
+    #[test]
     fn map_basic_functionality() {
         let mut map = OrderedMap::<&str, (&str, u32)>::default();
         for (key, value) in TEST_ITEMS_0.iter() {
@@ -263,6 +300,32 @@ mod tests {
                 assert_eq!(map.insert(key, *value), Some(*old_value));
                 assert!(map.is_valid());
                 assert_eq!(map.get(key), Some(value));
+            } else {
+                assert!(false);
+            }
+        }
+    }
+
+    #[test]
+    fn map_borrow_functionality() {
+        let mut map = OrderedMap::<String, (&str, u32)>::default();
+        for (key, value) in TEST_ITEMS_0.iter() {
+            println!("{:?} => {:?}", key, value);
+            assert!(map.insert(key.to_string(), *value).is_none());
+            assert!(map.is_valid());
+            assert_eq!(map.get(*key), Some(value));
+            assert_eq!(map.insert(key.to_string(), *value), Some(*value));
+            assert!(map.is_valid());
+        }
+        let mut hash_map = HashMap::<String, (&str, u32)>::new();
+        for (key, value) in TEST_ITEMS_0.iter() {
+            assert!(hash_map.insert(key.to_string(), *value).is_none());
+        }
+        for (key, value) in TEST_ITEMS_1.iter() {
+            if let Some(old_value) = hash_map.get(*key) {
+                assert_eq!(map.insert(key.to_string(), *value), Some(*old_value));
+                assert!(map.is_valid());
+                assert_eq!(map.get(*key), Some(value));
             } else {
                 assert!(false);
             }

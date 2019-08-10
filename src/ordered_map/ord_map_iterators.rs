@@ -1200,7 +1200,7 @@ mod tests {
         let map = MapIter::new(LIST, VALUES).except(set_iter).to_map();
         assert_eq!(map.len(), 4);
         for s in &["e", "i", "k"] {
-            assert!(!map.contains_key(&s));
+            assert!(!map.contains_key(s));
         }
     }
 
@@ -1210,7 +1210,7 @@ mod tests {
         let map = MapIter::new(LIST, VALUES).only(set_iter).to_map();
         assert_eq!(map.len(), 3);
         for s in &["e", "i", "k"] {
-            assert!(map.contains_key(&s));
+            assert!(map.contains_key(s));
         }
     }
 
