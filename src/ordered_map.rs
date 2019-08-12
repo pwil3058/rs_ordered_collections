@@ -72,7 +72,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
     pub fn contains_key<Q>(&self, key: &Q) -> bool
     where
         K: Borrow<Q>,
-        Q: Ord + ?Sized
+        Q: Ord + ?Sized,
     {
         self.keys.binary_search_by_key(&key, |x| x.borrow()).is_ok()
     }
@@ -105,7 +105,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
     pub fn get<Q>(&self, key: &Q) -> Option<&V>
     where
         K: Borrow<Q>,
-        Q: Ord + ?Sized
+        Q: Ord + ?Sized,
     {
         if let Ok(index) = self.keys.binary_search_by_key(&key, |x| x.borrow()) {
             Some(&self.values[index])
@@ -117,7 +117,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
     pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
     where
         K: Borrow<Q>,
-        Q: Ord + ?Sized
+        Q: Ord + ?Sized,
     {
         if let Ok(index) = self.keys.binary_search_by_key(&key, |x| x.borrow()) {
             Some(&mut self.values[index])
@@ -143,7 +143,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
     pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,
-        Q: Ord + ?Sized
+        Q: Ord + ?Sized,
     {
         match self.keys.binary_search_by_key(&key, |x| x.borrow()) {
             Ok(index) => {
@@ -157,7 +157,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
     pub fn remove_entry<Q>(&mut self, key: &Q) -> Option<(K, V)>
     where
         K: Borrow<Q>,
-        Q: Ord + ?Sized
+        Q: Ord + ?Sized,
     {
         match self.keys.binary_search_by_key(&key, |x| x.borrow()) {
             Ok(index) => Some((self.keys.remove(index), self.values.remove(index))),

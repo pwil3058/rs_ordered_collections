@@ -58,7 +58,7 @@ impl<T: Ord> OrderedSet<T> {
     pub fn remove<Q>(&mut self, item: &Q) -> bool
     where
         T: Borrow<Q>,
-        Q: Ord + ?Sized
+        Q: Ord + ?Sized,
     {
         if let Ok(index) = self.members.binary_search_by_key(&item, |x| x.borrow()) {
             self.members.remove(index);
@@ -72,9 +72,11 @@ impl<T: Ord> OrderedSet<T> {
     pub fn contains<Q>(&self, item: &Q) -> bool
     where
         T: Borrow<Q>,
-        Q: Ord + ?Sized
+        Q: Ord + ?Sized,
     {
-        self.members.binary_search_by_key(&item, |x| x.borrow()).is_ok()
+        self.members
+            .binary_search_by_key(&item, |x| x.borrow())
+            .is_ok()
     }
 
     pub fn first(&self) -> Option<&T> {

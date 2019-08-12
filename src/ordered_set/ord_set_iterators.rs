@@ -60,6 +60,67 @@ where
     }
 }
 
+// SELECTION ITERATOR
+pub struct Selector<'a, T, I, P>
+where
+    T: 'a + Ord,
+    I: Iterator<Item = &'a T>,
+    P: FnMut(&I::Item) -> bool,
+{
+    iter: I,
+    predicate: P,
+}
+
+impl<'a, T, I, P> Iterator for Selector<'a, T, I, P>
+where
+    T: 'a + Ord,
+    I: Iterator<Item = &'a T>,
+    P: FnMut(&I::Item) -> bool,
+{
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(element) = self.iter.next() {
+            if (self.predicate)(&element) {
+                return Some(element);
+            }
+        }
+        None
+    }
+}
+
+impl<'a, T, I, P> ToList<'a, T> for Selector<'a, T, I, P>
+where
+    T: 'a + Ord + Clone,
+    I: Iterator<Item = &'a T>,
+    P: FnMut(&I::Item) -> bool,
+{
+}
+
+impl<'a, T, I, P> ToSet<'a, T> for Selector<'a, T, I, P>
+where
+    T: 'a + Ord + Clone,
+    I: Iterator<Item = &'a T>,
+    P: FnMut(&I::Item) -> bool,
+{
+}
+
+pub trait Selection<'a, T>: Iterator<Item = &'a T>
+where
+    T: 'a + Ord + Clone,
+    Self: Sized,
+{
+    fn select<P>(self, predicate: P) -> Selector<'a, T, Self, P>
+    where
+        P: FnMut(&Self::Item) -> bool,
+    {
+        Selector {
+            iter: self,
+            predicate,
+        }
+    }
+}
+
 // SET ITERATOR
 
 /// An Iterator over the elements in an ordered list
@@ -108,6 +169,8 @@ impl<'a, T: Ord + Clone> ToList<'a, T> for SetIter<'a, T> {}
 impl<'a, T: Ord + Clone> ToSet<'a, T> for SetIter<'a, T> {}
 
 impl<'a, T: Ord + Clone> IterSetOperations<'a, T> for SetIter<'a, T> {}
+
+impl<'a, T: Ord + Clone> Selection<'a, T> for SetIter<'a, T> {}
 
 macro_rules! impl_op_for_set_iter {
     ( $op:ident, $op_fn:ident, $output:ident, $doc:meta ) => {
@@ -368,6 +431,14 @@ macro_rules! define_set_op_iterator {
         }
 
         impl<'a, T, L, R> ToSet<'a, T> for $iter<'a, T, L, R>
+        where
+            T: 'a + Ord + Clone,
+            L: SkipAheadIterator<'a, T>,
+            R: SkipAheadIterator<'a, T>,
+        {
+        }
+
+        impl<'a, T, L, R> Selection<'a, T> for $iter<'a, T, L, R>
         where
             T: 'a + Ord + Clone,
             L: SkipAheadIterator<'a, T>,
@@ -947,6 +1018,12 @@ mod tests {
             .to_set();
         let vec: Vec<&str> = set.iter().to_list();
         assert_eq!(vec, vec!["a", "c", "d", "e", "f"]);
+        let set = Union::new(SetIter::new(&LIST_0[0..3]), SetIter::new(&LIST_2[..2]))
+            .symmetric_difference(SetIter::new(&LIST_1[..3]))
+            .select(|x| **x == "d" || **x == "f")
+            .to_set();
+        let vec: Vec<&str> = set.iter().to_list();
+        assert_eq!(vec, vec!["d", "f"]);
     }
 
     #[test]
