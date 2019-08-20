@@ -181,6 +181,21 @@ impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for OrderedSet<T> {
     }
 }
 
+impl<'a, T: 'a + Ord + std::fmt::Display> std::fmt::Display for OrderedSet<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut string = "Set{".to_string();
+        for (index, item) in self.members.iter().enumerate() {
+            if index == 0 {
+                string += &format!("{}", item);
+            } else {
+                string += &format!(", {}", item);
+            }
+        }
+        string += "}";
+        write!(f, "{}", string)
+    }
+}
+
 macro_rules! define_set_operation {
     ( $iter:ident, $fn_doc:meta, $function:ident,  $op_doc:meta, $op:ident, $op_fn:ident ) => {
         impl<T: Ord> OrderedSet<T> {
@@ -282,6 +297,12 @@ mod tests {
         let mut s = DefaultHasher::new();
         t.hash(&mut s);
         s.finish()
+    }
+
+    #[test]
+    fn format_set() {
+        let set: OrderedSet<u32> = vec![5, 2, 6, 7].into();
+        assert_eq!(format!("{}", set), "Set{2, 5, 6, 7}");
     }
 
     #[test]
