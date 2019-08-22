@@ -6,14 +6,14 @@ use std::borrow::Borrow;
 use std::convert::From;
 use std::default::Default;
 use std::iter::FromIterator;
-use std::ops::{BitAnd, BitOr, BitXor, Sub};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Sub, SubAssign};
 use std::vec::Drain;
 
 pub mod ord_set_iterators;
 
 use self::ord_set_iterators::{
-    a_superset_b, are_disjoint, Difference, Intersection, SetIter, SymmetricDifference, ToSet,
-    Union,
+    a_superset_b, are_disjoint, Difference, Intersection, SetIter, SymmetricDifference,
+    ToList, ToSet, Union,
 };
 
 /// An set of items of type T ordered according to Ord (with no duplicates)
@@ -197,7 +197,7 @@ impl<'a, T: 'a + Ord + std::fmt::Display> std::fmt::Display for OrderedSet<T> {
 }
 
 macro_rules! define_set_operation {
-    ( $iter:ident, $fn_doc:meta, $function:ident,  $op_doc:meta, $op:ident, $op_fn:ident ) => {
+    ( $iter:ident, $fn_doc:meta, $function:ident, $op_doc:meta, $op:ident, $op_fn:ident, $opa_doc:meta, $opa:ident, $opa_fn:ident, ) => {
         impl<T: Ord> OrderedSet<T> {
             #[$fn_doc]
             pub fn $function<'a>(
@@ -225,6 +225,13 @@ macro_rules! define_set_operation {
                 self.$function(&other).to_set()
             }
         }
+
+        impl<T: Ord + Clone> $opa for OrderedSet<T> {
+            #[$opa_doc]
+            fn $opa_fn(&mut self, other: Self) {
+                self.members = self.$function(&other).to_list();
+            }
+        }
     };
 }
 
@@ -236,8 +243,12 @@ define_set_operation!(
     doc = "Apply the - operator to return a new set containing the set difference
     between this set and other i.e. the elements that are in this set but not in other.",
     Sub,
-    sub
+    sub,
+    doc = "Apply the -= operator to remove any element that is in the `other` set from `self`.",
+    SubAssign,
+    sub_assign,
 );
+
 define_set_operation!(
     SymmetricDifference,
     doc = "Return an ordered iterator over the symmetric set difference between this set and other
@@ -246,8 +257,13 @@ define_set_operation!(
     doc = "Apply the ^ operator to return a new set containing the symmetric set difference
     between this set and other i.e. the elements that are in this set or in other but not in both.",
     BitXor,
-    bitxor
+    bitxor,
+    doc = "Apply the ^= operator to remove any element that is in the `other` set from `self` and \
+    add any elements that are in `other` but not iin `self` to `self`.",
+    BitXorAssign,
+    bitxor_assign,
 );
+
 define_set_operation!(
     Union,
     doc = "Return an ordered iterator over the union of this set and other
@@ -256,8 +272,12 @@ define_set_operation!(
     doc = "Apply the | operator to return a new set containing the union of this set and other
     i.e. the elements that are in this set or in other.",
     BitOr,
-    bitor
+    bitor,
+    doc = "Apply the |= operator to add the elements in `other` to `self`",
+    BitOrAssign,
+    bitor_assign,
 );
+
 define_set_operation!(
     Intersection,
     doc = "Return an ordered iterator over the intersection of this set and other
@@ -266,7 +286,10 @@ define_set_operation!(
     doc = "Apply the & operator to return a new set containing the intersection
     of this set and other i.e. the elements that are in both this set and in other.",
     BitAnd,
-    bitand
+    bitand,
+    doc = "Apply the &= operator to remove any element that is not in the `other` set from `self`.",
+    BitAndAssign,
+    bitand_assign,
 );
 
 #[cfg(test)]
