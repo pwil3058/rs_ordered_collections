@@ -12,8 +12,8 @@ use std::vec::Drain;
 pub mod ord_set_iterators;
 
 use self::ord_set_iterators::{
-    a_superset_b, are_disjoint, Difference, Intersection, SetIter, SymmetricDifference,
-    ToList, ToSet, Union,
+    a_superset_b, are_disjoint, Difference, Intersection, SetIter, SymmetricDifference, ToList,
+    ToSet, Union,
 };
 
 /// An set of items of type T ordered according to Ord (with no duplicates)
@@ -232,6 +232,13 @@ macro_rules! define_set_operation {
                 self.members = self.$function(&other).to_list();
             }
         }
+
+        impl<T: Ord + Clone> $opa<&Self> for OrderedSet<T> {
+            #[$opa_doc]
+            fn $opa_fn(&mut self, other: &Self) {
+                self.members = self.$function(other).to_list();
+            }
+        }
     };
 }
 
@@ -259,7 +266,7 @@ define_set_operation!(
     BitXor,
     bitxor,
     doc = "Apply the ^= operator to remove any element that is in the `other` set from `self` and \
-    add any elements that are in `other` but not iin `self` to `self`.",
+           add any elements that are in `other` but not iin `self` to `self`.",
     BitXorAssign,
     bitxor_assign,
 );
@@ -526,7 +533,7 @@ mod tests {
     }
 
     #[test]
-    fn test_difference() {
+    fn difference() {
         let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
         let str_set2: OrderedSet<String> =
@@ -542,7 +549,21 @@ mod tests {
     }
 
     #[test]
-    fn test_symmetric_difference() {
+    fn difference_assign() {
+        let mut set1: OrderedSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        let set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let set3: OrderedSet<String> = TEST_STRS[0..4].into_iter().map(|s| s.to_string()).collect();
+        set1 -= &set2;
+        assert_eq!(set1, set3);
+        let mut set1: OrderedSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        set1 -= set2;
+        assert_eq!(set1, set3);
+    }
+
+    #[test]
+    fn symmetric_difference() {
         let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
         let str_set2: OrderedSet<String> =
@@ -561,7 +582,25 @@ mod tests {
     }
 
     #[test]
-    fn test_union() {
+    fn symmetric_difference_assign() {
+        let mut set1: OrderedSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        let set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let set3: OrderedSet<String> = TEST_STRS[0..4]
+            .into_iter()
+            .chain(TEST_STRS[8..].into_iter())
+            .map(|s| s.to_string())
+            .collect();
+        set1 ^= &set2;
+        assert_eq!(set1, set3);
+        let mut set1: OrderedSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        set1 ^= set2;
+        assert_eq!(set1, set3);
+    }
+
+    #[test]
+    fn union() {
         let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
         let str_set2: OrderedSet<String> =
@@ -577,7 +616,21 @@ mod tests {
     }
 
     #[test]
-    fn test_intersection() {
+    fn union_assign() {
+        let mut set1: OrderedSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        let set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let set3: OrderedSet<String> = TEST_STRS[0..].into_iter().map(|s| s.to_string()).collect();
+        set1 |= &set2;
+        assert_eq!(set1, set3);
+        let mut set1: OrderedSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        set1 |= set2;
+        assert_eq!(set1, set3);
+    }
+
+    #[test]
+    fn intersection() {
         let str_set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
         let str_set2: OrderedSet<String> =
@@ -590,5 +643,19 @@ mod tests {
         let result = str_set1 & str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn intersection_assign() {
+        let mut set1: OrderedSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        let set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
+        let set3: OrderedSet<String> = TEST_STRS[4..8].into_iter().map(|s| s.to_string()).collect();
+        set1 &= &set2;
+        assert_eq!(set1, set3);
+        let mut set1: OrderedSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        set1 &= set2;
+        assert_eq!(set1, set3);
     }
 }
