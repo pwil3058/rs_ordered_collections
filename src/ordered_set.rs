@@ -44,7 +44,8 @@ impl<T: Ord> OrderedSet<T> {
         self.members.clear()
     }
 
-    /// Return false if the item was already a member otherwise true
+    /// Insert `item` in the set and return `false`
+    /// if the item was already a member otherwise true
     pub fn insert(&mut self, item: T) -> bool {
         if let Err(index) = self.members.binary_search(&item) {
             self.members.insert(index, item);
@@ -54,7 +55,8 @@ impl<T: Ord> OrderedSet<T> {
         }
     }
 
-    /// Return true if the item was a member and false otherwise
+    /// Remove `item` from the set and return `false`
+    /// if the item was a member and false otherwise
     pub fn remove<Q>(&mut self, item: &Q) -> bool
     where
         T: Borrow<Q>,
@@ -68,7 +70,7 @@ impl<T: Ord> OrderedSet<T> {
         }
     }
 
-    /// Return false if the item is already a member
+    /// Return `true` if `item` is a member of the set
     pub fn contains<Q>(&self, item: &Q) -> bool
     where
         T: Borrow<Q>,
@@ -116,7 +118,7 @@ impl<T: Ord> OrderedSet<T> {
         a_superset_b(other.iter(), self.iter())
     }
 
-    /// Return true if self is a subset of other
+    /// Return true if self is a proper subset of other
     pub fn is_proper_subset(&self, other: &Self) -> bool {
         other.len() > self.len() && a_superset_b(other.iter(), self.iter())
     }
@@ -126,7 +128,7 @@ impl<T: Ord> OrderedSet<T> {
         a_superset_b(self.iter(), other.iter())
     }
 
-    /// Return true if self is a superset of other
+    /// Return true if self is a proper superset of other
     pub fn is_proper_superset(&self, other: &Self) -> bool {
         self.len() > other.len() && a_superset_b(self.iter(), other.iter())
     }
