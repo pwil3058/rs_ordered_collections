@@ -15,8 +15,7 @@ pub use self::ord_map_iterators::{
 };
 
 pub use crate::ordered_set::ord_set_iterators::{
-    a_proper_superset_b, a_superset_b, are_disjoint, Difference, Intersection, SetIter,
-    SymmetricDifference, Union,
+    Difference, Intersection, SetIter, SymmetricDifference, Union,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]

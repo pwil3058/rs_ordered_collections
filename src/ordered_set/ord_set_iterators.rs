@@ -194,7 +194,7 @@ impl_op_for_set_iter!(
     BitOr,
     bitor,
     Union,
-    doc = "Return a new ordered iterator orver the set union of the contents
+    doc = "Return a new ordered iterator over the set union of the contents
     of this iterator and other i.e. elements that appear in this iterator
     or other."
 );
@@ -202,7 +202,7 @@ impl_op_for_set_iter!(
     BitAnd,
     bitand,
     Intersection,
-    doc = "Return a new ordered iterator orver the set intersection of the contents
+    doc = "Return a new ordered iterator over the set intersection of the contents
     of this iterator and other i.e. elements that appear in both this iterator
     and other."
 );
@@ -210,7 +210,7 @@ impl_op_for_set_iter!(
     BitXor,
     bitxor,
     SymmetricDifference,
-    doc = "Return a new ordered iterator orver the symmetric set difference
+    doc = "Return a new ordered iterator over the symmetric set difference
     between the contents of this iterator and other i.e. elements that appear
     in this iterator or other but not both."
 );
@@ -218,7 +218,7 @@ impl_op_for_set_iter!(
     Sub,
     sub,
     Difference,
-    doc = "Return a new ordered iterator orver the set difference of the contents
+    doc = "Return a new ordered iterator over the set difference of the contents
     of this iterator and other i.e. elements that appear in this iterator
     but not other."
 );
@@ -286,7 +286,7 @@ where
 }
 
 /// The contents of the two iterators are disjoint
-pub fn are_disjoint<'a, T, L, R>(mut l_iter: L, mut r_iter: R) -> bool
+pub(crate) fn are_disjoint<'a, T, L, R>(mut l_iter: L, mut r_iter: R) -> bool
 where
     T: 'a + Ord,
     L: SkipAheadIterator<'a, T>,
@@ -316,7 +316,7 @@ where
 }
 
 /// The contents of Iterator "a" are a superset of the contents of "b"
-pub fn a_superset_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
+pub(crate) fn a_superset_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
 where
     T: 'a + Ord,
     A: SkipAheadIterator<'a, T>,
@@ -344,7 +344,7 @@ where
 }
 
 /// The contents of Iterator "a" are a proper superset of the contents of "b"
-pub fn a_proper_superset_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
+pub(crate) fn a_proper_superset_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
 where
     T: 'a + Ord,
     A: SkipAheadIterator<'a, T>,
