@@ -307,7 +307,6 @@ mod tests {
     use std::hash::{Hash, Hasher};
 
     use super::*;
-    use rand::prelude::*;
 
     use crate::ordered_set::ord_set_iterators::{SkipAheadIterator, ToList};
 
@@ -316,13 +315,35 @@ mod tests {
         "mmm", "lll", "nnn", "ppp", "rrr",
     ];
 
-    fn random_sequence(length: usize) -> Vec<u64> {
-        let mut v = vec![];
-        for _ in 0..length {
-            let t: u64 = random();
-            v.push(t)
+    struct LinearCongrentialGenerator {
+        a: u64,
+        m: u64,
+        x: u64,
+    }
+
+    impl LinearCongrentialGenerator {
+        fn new(seed: u64) -> Self {
+            Self {
+                a: (1 << 18) + 1,
+                m: (1 << 35),
+                x: seed,
+            }
         }
-        v
+    }
+
+    impl Iterator for LinearCongrentialGenerator {
+        type Item = u64;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            self.x = (self.x * self.a + 1) % self.m;
+            Some(self.x)
+        }
+    }
+
+    fn random_sequence(length: usize) -> Vec<u64> {
+        LinearCongrentialGenerator::new(length as u64)
+            .take(length)
+            .collect()
     }
 
     fn calculate_hash<T: Hash>(t: &T) -> u64 {
