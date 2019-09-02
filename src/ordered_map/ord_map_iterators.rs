@@ -24,7 +24,6 @@ use std::slice::IterMut;
 use crate::OrderedMap;
 
 use crate::ordered_set::ord_set_iterators::SkipAheadIterator;
-use std::iter::Map;
 
 /// Iterator enhancement to provide peek and advance ahead features. This mechanism
 /// is used to optimise implementation of set like operation (except, only, etc)

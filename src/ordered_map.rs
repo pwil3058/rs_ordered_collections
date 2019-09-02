@@ -76,15 +76,13 @@ impl<K: Ord, V> OrderedMap<K, V> {
         self.keys.binary_search_by_key(&key, |x| x.borrow()).is_ok()
     }
 
-    // TODO: test drain for OrderedMap
     pub fn drain<Q, R>(&mut self, range: R) -> MapDrain<K, V>
     where
         Q: Ord + Sized,
         R: std::ops::RangeBounds<Q>,
         K: Borrow<Q>,
     {
-        let start_index = super::lower_bound_index(&self.keys, range.start_bound());
-        let end_index = super::upper_bound_index(&self.keys, range.end_bound());
+        let (start_index, end_index) = super::range_indices(&self.keys, range);
         MapDrain::new(
             self.keys.drain(start_index..end_index),
             self.values.drain(start_index..end_index),
@@ -222,6 +220,7 @@ impl<K: Ord, V> IndexMut<K> for OrderedMap<K, V> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ordered_set::ord_set_iterators::{ToList, ToSet};
     use std::collections::HashMap;
 
     static TEST_ITEMS_0: &[(&str, (&str, u32))] = &[
@@ -305,6 +304,20 @@ mod tests {
                 assert!(false);
             }
         }
+    }
+
+    #[test]
+    fn drain_map() {
+        let mut map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0.into();
+        let keys_before = map1.keys().to_set();
+        let list: Vec<(&str, (&str, u32))> = map1.drain("ccc".."iii").collect();
+        let map2: OrderedMap<&str, (&str, u32)> = list.into();
+        assert_eq!(
+            map2.keys().to_list(),
+            vec!["ccc", "ddd", "eee", "fff", "ggg", "hhh"]
+        );
+        let keys_after = map1.keys().to_set();
+        assert_eq!(keys_after, keys_before - map2.keys().to_set());
     }
 
     #[test]
