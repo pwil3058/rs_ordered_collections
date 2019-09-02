@@ -105,8 +105,7 @@ impl<T: Ord> OrderedSet<T> {
         R: std::ops::RangeBounds<K>,
         T: Borrow<K>,
     {
-        let start_index = super::lower_bound_index(&self.members, range.start_bound());
-        let end_index = super::upper_bound_index(&self.members, range.end_bound());
+        let (start_index, end_index) = super::range_indices(&self.members, range);
         SetIter::new(&self.members[start_index..end_index])
     }
 
@@ -118,8 +117,7 @@ impl<T: Ord> OrderedSet<T> {
         R: std::ops::RangeBounds<K>,
         T: Borrow<K>,
     {
-        let start_index = super::lower_bound_index(&self.members, range.start_bound());
-        let end_index = super::upper_bound_index(&self.members, range.end_bound());
+        let (start_index, end_index) = super::range_indices(&self.members, range);
         self.members.drain(start_index..end_index)
     }
 
