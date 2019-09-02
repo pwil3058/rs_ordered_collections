@@ -31,6 +31,44 @@ macro_rules! ordered_map {
 pub mod ordered_map;
 pub mod ordered_set;
 
+fn lower_bound_index<T, K>(members: &[T], bound: std::ops::Bound<&K>) -> usize
+where
+    K: Ord + Sized,
+    T: Ord + std::borrow::Borrow<K>,
+{
+    use std::ops::Bound::*;
+    match bound {
+        Unbounded => 0,
+        Included(item) => match members.binary_search_by_key(&item, |x| x.borrow()) {
+            Ok(index) => index,
+            Err(index) => index,
+        },
+        Excluded(item) => match members.binary_search_by_key(&item, |x| x.borrow()) {
+            Ok(index) => index + 1,
+            Err(index) => index,
+        },
+    }
+}
+
+fn upper_bound_index<T, K>(members: &[T], bound: std::ops::Bound<&K>) -> usize
+where
+    K: Ord + Sized,
+    T: Ord + std::borrow::Borrow<K>,
+{
+    use std::ops::Bound::*;
+    match bound {
+        Unbounded => members.len(),
+        Included(item) => match members.binary_search_by_key(&item, |x| x.borrow()) {
+            Ok(index) => index + 1,
+            Err(index) => index,
+        },
+        Excluded(item) => match members.binary_search_by_key(&item, |x| x.borrow()) {
+            Ok(index) => index,
+            Err(index) => index,
+        },
+    }
+}
+
 pub use ordered_map::OrderedMap;
 pub use ordered_set::OrderedSet;
 

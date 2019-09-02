@@ -81,20 +81,46 @@ impl<T: Ord> OrderedSet<T> {
             .is_ok()
     }
 
+    /// Returns the `OrderedSet`'s first element in ascending order, or `None` if it is empty.
     pub fn first(&self) -> Option<&T> {
         self.members.first()
     }
 
+    /// Returns the `OrderedSet`'s last element in ascending order, or `None` if it is empty.
     pub fn last(&self) -> Option<&T> {
         self.members.last()
     }
 
+    /// Returns an iterator that iterates over the `OrderedSet`'s elements in ascending
+    /// order
     pub fn iter(&self) -> SetIter<'_, T> {
         SetIter::new(&self.members)
     }
 
-    pub fn drain(&mut self) -> Drain<'_, T> {
-        self.members.drain(..)
+    /// Returns an iterator that iterates over the `OrderedSet`'s elements that fall within the
+    /// given range in ascending order
+    pub fn range<K, R>(&self, range: R) -> SetIter<'_, T>
+    where
+        K: Ord + Sized,
+        R: std::ops::RangeBounds<K>,
+        T: Borrow<K>,
+    {
+        let start_index = super::lower_bound_index(&self.members, range.start_bound());
+        let end_index = super::upper_bound_index(&self.members, range.end_bound());
+        SetIter::new(&self.members[start_index..end_index])
+    }
+
+    /// Returns a draining iterator that removes the `OrderedSet`'s elements that fall within the
+    /// given range and yields the removed elements
+    pub fn drain<K, R>(&mut self, range: R) -> Drain<'_, T>
+    where
+        K: Ord + Sized,
+        R: std::ops::RangeBounds<K>,
+        T: Borrow<K>,
+    {
+        let start_index = super::lower_bound_index(&self.members, range.start_bound());
+        let end_index = super::upper_bound_index(&self.members, range.end_bound());
+        self.members.drain(start_index..end_index)
     }
 
     // Return true if members is sorted and contains no duplicates
@@ -375,6 +401,29 @@ mod tests {
         assert_eq!(vec, set.iter().to_list());
         let set: OrderedSet<&str> = vec!["a", "h", "b", "z", "x", "i", "b"].into();
         assert_eq!(vec!["a", "b", "h", "i", "x", "z"], set.iter().to_list());
+    }
+
+    #[test]
+    fn range() {
+        let set: OrderedSet<&str> = vec!["a", "h", "b", "z", "x", "i", "b"].into();
+        assert_eq!(set.range("b".."x").to_list(), vec!["b", "h", "i"]);
+        assert_eq!(set.range("b"..="x").to_list(), vec!["b", "h", "i", "x"]);
+        assert_eq!(
+            set.range::<&str, _>((
+                std::ops::Bound::Excluded("b"),
+                std::ops::Bound::Included("x")
+            ))
+            .to_list(),
+            vec!["h", "i", "x"]
+        );
+    }
+
+    #[test]
+    fn drain() {
+        let mut set: OrderedSet<&str> = vec!["a", "h", "b", "z", "x", "i", "b"].into();
+        let drainage: Vec<&str> = set.drain("b".."x").collect();
+        assert_eq!(drainage, vec!["b", "h", "i"]);
+        assert_eq!(set.iter().to_list(), vec!["a", "x", "z"],)
     }
 
     #[test]
