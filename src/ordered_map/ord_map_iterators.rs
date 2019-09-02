@@ -24,6 +24,7 @@ use std::slice::IterMut;
 use crate::OrderedMap;
 
 use crate::ordered_set::ord_set_iterators::SkipAheadIterator;
+use std::iter::Map;
 
 /// Iterator enhancement to provide peek and advance ahead features. This mechanism
 /// is used to optimise implementation of set like operation (except, only, etc)
@@ -1094,6 +1095,39 @@ where
     /// contents of this iterator and other.
     fn bitor(self, other: I) -> Self::Output {
         self.merge(other)
+    }
+}
+
+// MAP DRAIN
+
+/// A draining iterator that removes items from an `OrderedMap` and iterates over the removed
+/// items in ascending order of their keys
+pub struct MapDrain<'a, K: Ord, V> {
+    key_drain: std::vec::Drain<'a, K>,
+    value_drain: std::vec::Drain<'a, V>,
+}
+
+impl<'a, K: Ord, V> MapDrain<'a, K, V> {
+    pub(crate) fn new(
+        key_drain: std::vec::Drain<'a, K>,
+        value_drain: std::vec::Drain<'a, V>,
+    ) -> Self {
+        Self {
+            key_drain,
+            value_drain,
+        }
+    }
+}
+
+impl<'a, K: Ord, V> Iterator for MapDrain<'a, K, V> {
+    type Item = (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(key) = self.key_drain.next() {
+            Some((key, self.value_drain.next().unwrap()))
+        } else {
+            None
+        }
     }
 }
 

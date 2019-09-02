@@ -10,7 +10,7 @@ pub mod ord_map_iterators;
 pub use self::map_entry::*;
 
 pub use self::ord_map_iterators::{
-    MapIter, MapIterFilter, MapIterMerge, MapIterMut, MapIterMutFilter, MapIterMutMerge,
+    MapDrain, MapIter, MapIterFilter, MapIterMerge, MapIterMut, MapIterMutFilter, MapIterMutMerge,
     MapMergeIter, MapMergeIterMut, ToMap, ValueIter, ValueIterMut,
 };
 
@@ -76,10 +76,20 @@ impl<K: Ord, V> OrderedMap<K, V> {
         self.keys.binary_search_by_key(&key, |x| x.borrow()).is_ok()
     }
 
-    // TODO: implement a useful drain for OrderedMap
-    //pub fn drain(&mut self) -> Drain<(K, V)> {
-    //    self.keys.drain(..)
-    //}
+    // TODO: test drain for OrderedMap
+    pub fn drain<Q, R>(&mut self, range: R) -> MapDrain<K, V>
+    where
+        Q: Ord + Sized,
+        R: std::ops::RangeBounds<Q>,
+        K: Borrow<Q>,
+    {
+        let start_index = super::lower_bound_index(&self.keys, range.start_bound());
+        let end_index = super::upper_bound_index(&self.keys, range.end_bound());
+        MapDrain::new(
+            self.keys.drain(start_index..end_index),
+            self.values.drain(start_index..end_index),
+        )
+    }
 
     pub fn iter(&self) -> MapIter<'_, K, V> {
         MapIter::new(&self.keys, &self.values)
