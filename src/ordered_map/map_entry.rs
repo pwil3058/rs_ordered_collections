@@ -87,6 +87,8 @@ impl<'a, K: Ord, V> Entry<'a, K, V> {
 }
 
 impl<'a, K: Ord, V: Default> Entry<'a, K, V> {
+    /// Ensures a value is in the entry by inserting `V::default()` if vacant and returns
+    /// a mutable reference to the value in the entry.
     pub fn or_default(self) -> &'a mut V {
         match self {
             Entry::Occupied(entry) => entry.into_mut(),

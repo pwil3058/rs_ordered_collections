@@ -463,6 +463,7 @@ macro_rules! define_set_op_iterator {
         over the union of this iteratro and other
         i.e. the elements that are in this iterator or in other.",
         );
+
         impl_op_for_iterator!(
             $iter,
             BitAnd,
@@ -472,6 +473,7 @@ macro_rules! define_set_op_iterator {
         over the intersection of this iterator and other i.e. the
         elements that are in both this set and in other.",
         );
+
         impl_op_for_iterator!(
             $iter,
             BitXor,
@@ -481,6 +483,7 @@ macro_rules! define_set_op_iterator {
         the symmetric set difference between this iterator and other
         i.e. the elements that are in this iterator or in other but not in both.",
         );
+
         impl_op_for_iterator!(
             $iter,
             Sub,

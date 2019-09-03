@@ -46,7 +46,7 @@ where
     K: 'a + Ord + Clone,
     V: 'a + Clone,
 {
-    /// Create a OrderedSet<T> from the items in the Iterator's output
+    /// Create an `OrderedMap<K, V>` from the items in the iterator's output
     fn to_map(&mut self) -> OrderedMap<K, V> {
         let mut keys: Vec<K> = vec![];
         let mut values: Vec<V> = vec![];
@@ -68,7 +68,7 @@ pub struct MapIter<'a, K: Ord, V> {
 }
 
 impl<'a, K: Ord, V> MapIter<'a, K, V> {
-    pub fn new(keys: &'a [K], values: &'a [V]) -> Self {
+    pub(crate) fn new(keys: &'a [K], values: &'a [V]) -> Self {
         Self {
             keys,
             values,
@@ -370,7 +370,7 @@ pub struct MapIterMut<'a, K: Ord, V> {
 }
 
 impl<'a, K: 'a + Ord, V: 'a> MapIterMut<'a, K, V> {
-    pub fn new(keys: &'a [K], values: &'a mut [V]) -> Self {
+    pub(crate) fn new(keys: &'a [K], values: &'a mut [V]) -> Self {
         Self {
             iter_mut: values.iter_mut(),
             keys,
@@ -657,7 +657,7 @@ pub struct ValueIter<'a, K: Ord, V> {
 }
 
 impl<'a, K: Ord, V> ValueIter<'a, K, V> {
-    pub fn new(keys: &'a [K], values: &'a [V]) -> Self {
+    pub(crate) fn new(keys: &'a [K], values: &'a [V]) -> Self {
         Self {
             keys,
             values,
@@ -706,7 +706,7 @@ pub struct ValueIterMut<'a, K: Ord, V> {
 }
 
 impl<'a, K: 'a + Ord, V: 'a> ValueIterMut<'a, K, V> {
-    pub fn new(keys: &'a [K], values: &'a mut [V]) -> Self {
+    pub(crate) fn new(keys: &'a [K], values: &'a mut [V]) -> Self {
         Self {
             iter_mut: values.iter_mut(),
             keys,
@@ -789,7 +789,7 @@ where
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
     R: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
 {
-    pub fn new(l_iter: L, r_iter: R) -> Self {
+    pub(crate) fn new(l_iter: L, r_iter: R) -> Self {
         Self {
             l_iter,
             r_iter,
@@ -964,7 +964,7 @@ where
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>,
     R: SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>,
 {
-    pub fn new(l_iter: L, r_iter: R) -> Self {
+    pub(crate) fn new(l_iter: L, r_iter: R) -> Self {
         Self {
             l_iter,
             r_iter,
