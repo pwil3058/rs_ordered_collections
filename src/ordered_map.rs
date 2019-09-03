@@ -1,6 +1,7 @@
 use std::borrow::Borrow;
 use std::convert::From;
 use std::default::Default;
+use std::iter::FromIterator;
 use std::ops::{Index, IndexMut};
 use std::vec;
 
@@ -246,11 +247,48 @@ impl<K: Ord, V> From<Vec<(K, V)>> for OrderedMap<K, V> {
     }
 }
 
+/// Convert to `OrderedMap<K, V>` from a `Vec<(&'a K, &'a V)>`. If duplicate keys are present
+/// the last value for the key in the `Vec` is used.
+impl<'a, K: Ord + Clone, V: Clone> From<Vec<(&'a K, &'a V)>> for OrderedMap<K, V> {
+    fn from(mut list: Vec<(&'a K, &'a V)>) -> Self {
+        // sorting list first should make insertion equivalent to a push()
+        // use stable sort so that (in the event of duplicate keys) order
+        // is retained and the last value specified is used
+        list.sort_by(|a, b| a.0.cmp(&b.0));
+        let mut map = Self::default();
+        for (key, value) in list.drain(..) {
+            map.insert(key.clone(), value.clone());
+        }
+        map
+    }
+}
+
 /// Convert to `OrderedMap<K, V>` from a borrowed `Vec<(K, V)>`. If duplicate keys are present
 /// the last value for the key in the slice is used.
 impl<K: Ord + Clone, V: Clone> From<&[(K, V)]> for OrderedMap<K, V> {
     fn from(list: &[(K, V)]) -> Self {
         list.to_vec().into()
+    }
+}
+
+impl<K: Ord + Clone, V: Clone> FromIterator<(K, V)> for OrderedMap<K, V> {
+    fn from_iter<I: IntoIterator<Item = (K, V)>>(iter: I) -> Self {
+        let list: Vec<(K, V)> = iter.into_iter().collect();
+        list.into()
+    }
+}
+
+impl<'a, K: 'a + Ord + Clone, V: 'a + Clone> FromIterator<&'a (K, V)> for OrderedMap<K, V> {
+    fn from_iter<I: IntoIterator<Item = &'a (K, V)>>(iter: I) -> Self {
+        let list: Vec<(K, V)> = iter.into_iter().cloned().collect();
+        list.into()
+    }
+}
+
+impl<'a, K: 'a + Ord + Clone, V: 'a + Clone> FromIterator<(&'a K, &'a V)> for OrderedMap<K, V> {
+    fn from_iter<I: IntoIterator<Item = (&'a K, &'a V)>>(iter: I) -> Self {
+        let list: Vec<(&'a K, &'a V)> = iter.into_iter().collect();
+        list.into()
     }
 }
 
@@ -267,7 +305,7 @@ impl<K: Ord, V> Index<K> for OrderedMap<K, V> {
 }
 
 impl<K: Ord, V> IndexMut<K> for OrderedMap<K, V> {
-    fn index_mut<'a>(&'a mut self, key: K) -> &'a mut Self::Output {
+    fn index_mut(&mut self, key: K) -> &mut Self::Output {
         if let Ok(index) = self.keys.binary_search(&key) {
             &mut self.values[index]
         } else {
