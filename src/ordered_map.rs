@@ -68,6 +68,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
         self.values.clear();
     }
 
+    /// Returns `true` if there is an entry for `key` in the `OrderedMap` and `false` otherwise.
     pub fn contains_key<Q>(&self, key: &Q) -> bool
     where
         K: Borrow<Q>,
@@ -76,6 +77,9 @@ impl<K: Ord, V> OrderedMap<K, V> {
         self.keys.binary_search_by_key(&key, |x| x.borrow()).is_ok()
     }
 
+    /// Clear entries from the `OrderedMap` whose keys fall within the specified `range` and
+    /// return an iterator that iterates over the removed key-values in ascending order of their
+    /// keys. The iterator item type is `(K, V)`.
     pub fn drain<Q, R>(&mut self, range: R) -> MapDrain<K, V>
     where
         Q: Ord + Sized,
@@ -89,12 +93,49 @@ impl<K: Ord, V> OrderedMap<K, V> {
         )
     }
 
+    /// Returns an iterator visiting all key-value pairs in ascending order of their keys.
+    /// The iterator item type is `(&'a K, &'a V)`.
     pub fn iter(&self) -> MapIter<'_, K, V> {
         MapIter::new(&self.keys, &self.values)
     }
 
+    /// Returns an iterator visiting all key-value pairs in ascending order of their keys, with
+    /// mutable references to the values.
+    /// The iterator item type is `(&'a K, &'a mut V)`.
     pub fn iter_mut(&mut self) -> MapIterMut<'_, K, V> {
         MapIterMut::new(&self.keys, &mut self.values)
+    }
+
+    /// Returns an iterator visiting all key-value pairs whose key falls within the specified
+    /// range in ascending order of their keys.
+    /// The iterator item type is `(&'a K, &'a V)`.
+    pub fn range<Q, R>(&self, range: R) -> MapIter<'_, K, V>
+    where
+        Q: Ord + Sized,
+        R: std::ops::RangeBounds<Q>,
+        K: Borrow<Q>,
+    {
+        let (start_index, end_index) = super::range_indices(&self.keys, range);
+        MapIter::new(
+            &self.keys[start_index..end_index],
+            &self.values[start_index..end_index],
+        )
+    }
+
+    /// Returns an iterator visiting all key-value pairs whose key falls within the specified
+    /// range in ascending order of their keys, with mutable references to the values.
+    /// The iterator item type is `(&'a K, &'a mut V)`.
+    pub fn range_mut<Q, R>(&mut self, range: R) -> MapIterMut<'_, K, V>
+    where
+        Q: Ord + Sized,
+        R: std::ops::RangeBounds<Q>,
+        K: Borrow<Q>,
+    {
+        let (start_index, end_index) = super::range_indices(&self.keys, range);
+        MapIterMut::new(
+            &self.keys[start_index..end_index],
+            &mut self.values[start_index..end_index],
+        )
     }
 
     pub fn keys(&self) -> SetIter<'_, K> {
@@ -173,7 +214,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
     }
 }
 
-/// Convert to OrderedMap<K, V> from a Vec<(K, V)>
+/// Convert to `OrderedMap<K, V>` from a `Vec<(K, V)>`
 impl<K: Ord, V> From<Vec<(K, V)>> for OrderedMap<K, V> {
     fn from(mut list: Vec<(K, V)>) -> Self {
         let mut map = Self::default();
@@ -184,7 +225,7 @@ impl<K: Ord, V> From<Vec<(K, V)>> for OrderedMap<K, V> {
     }
 }
 
-/// Convert to OrderedMap<K, V> from a Vec<(K, V)>
+/// Convert to `OrderedMap<K, V>` from a borrowed `Vec<(K, V)>`
 impl<K: Ord + Clone, V: Clone> From<&[(K, V)]> for OrderedMap<K, V> {
     fn from(list: &[(K, V)]) -> Self {
         let mut map = Self::default();
@@ -304,6 +345,52 @@ mod tests {
                 assert!(false);
             }
         }
+    }
+
+    #[test]
+    fn iter_map() {
+        let map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0.into();
+        let keys_before = map1.keys().to_set();
+        let mut count: usize = 0;
+        for (key, value) in map1.iter() {
+            assert!(TEST_ITEMS_0.contains(&(*key, *value)));
+            count += 1;
+        }
+        assert_eq!(count, map1.len());
+        assert_eq!(map1.keys().to_set(), keys_before);
+        count = 0;
+        for (key, value) in map1.range("ccc".."iii") {
+            assert!(*key >= "ccc" && *key < "iii");
+            assert!(TEST_ITEMS_0.contains(&(*key, *value)));
+            count += 1;
+        }
+        assert_eq!(count, 6);
+        assert_eq!(map1.keys().to_set(), keys_before);
+    }
+
+    #[test]
+    fn iter_map_mut() {
+        let mut map1: OrderedMap<&str, (&str, u32)> = TEST_ITEMS_0.into();
+        let keys_before = map1.keys().to_set();
+        for (i, (_key, value)) in map1.iter_mut().enumerate() {
+            value.1 += i as u32;
+        }
+        for (i, (_key, value)) in map1.iter().enumerate() {
+            assert_eq!(value.1, i as u32);
+        }
+        for (i, (_key, value)) in map1.range_mut("ccc".."iii").enumerate() {
+            value.1 += i as u32;
+        }
+        let mut count: u32 = 0;
+        for (i, (key, value)) in map1.iter().enumerate() {
+            if *key >= "ccc" && *key < "iii" {
+                assert_eq!(value.1, i as u32 + count);
+                count += 1;
+            } else {
+                assert_eq!(value.1, i as u32);
+            }
+        }
+        assert_eq!(map1.keys().to_set(), keys_before);
     }
 
     #[test]

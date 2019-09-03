@@ -29,9 +29,6 @@ use crate::ordered_set::ord_set_iterators::SkipAheadIterator;
 /// is used to optimise implementation of set like operation (except, only, etc)
 /// filters.
 pub trait SkipAheadMapIterator<'a, K: 'a + Ord, I: 'a>: Iterator<Item = I> {
-    /// Peek at the next key in the iterator without advancing the iterator.
-    fn peek_key(&mut self) -> Option<&'a K>;
-
     /// Advance this iterator to the next item with a key after the given key
     /// and return a pointer to this iterator.
     fn advance_past_key(&mut self, key: &K) -> &mut Self;
@@ -39,6 +36,9 @@ pub trait SkipAheadMapIterator<'a, K: 'a + Ord, I: 'a>: Iterator<Item = I> {
     /// Advance this iterator to the next item with a key at or after the given key
     /// and return a pointer to this iterator.
     fn advance_until_key(&mut self, key: &K) -> &mut Self;
+
+    /// Peek at the next key in the iterator without advancing the iterator.
+    fn peek_key(&mut self) -> Option<&'a K>;
 }
 
 pub trait ToMap<'a, K, V>: Iterator<Item = (&'a K, &'a V)>
