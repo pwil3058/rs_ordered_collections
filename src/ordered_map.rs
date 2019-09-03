@@ -63,6 +63,7 @@ impl<K: Ord, V> OrderedMap<K, V> {
         self.keys.capacity().min(self.values.capacity())
     }
 
+    /// Removes all key-value pairs from the `OrderedMap` (see also: `drain()`).
     pub fn clear(&mut self) {
         self.keys.clear();
         self.values.clear();
@@ -138,18 +139,25 @@ impl<K: Ord, V> OrderedMap<K, V> {
         )
     }
 
+    /// Returns a `crate::ord_set_iterators::SetIter` iterator visiting all keys in the
+    /// `OrderedMap` in ascending order.
     pub fn keys(&self) -> SetIter<'_, K> {
         SetIter::new(&self.keys)
     }
 
+    /// Returns an iterator visiting all values in the `OrderedMap` in ascending order of their keys.
     pub fn values(&self) -> ValueIter<'_, K, V> {
         ValueIter::new(&self.keys, &self.values)
     }
 
+    /// Returns an iterator returning a mutable reference to all values in the `OrderedMap` in
+    /// ascending order of their keys.
     pub fn values_mut(&mut self) -> ValueIterMut<'_, K, V> {
         ValueIterMut::new(&self.keys, &mut self.values)
     }
 
+    /// Returns an immutable reference to the value in the `OrderedMap` associated with `key` if
+    /// it exists and `None` otherwise.
     pub fn get<Q>(&self, key: &Q) -> Option<&V>
     where
         K: Borrow<Q>,
@@ -162,6 +170,8 @@ impl<K: Ord, V> OrderedMap<K, V> {
         }
     }
 
+    /// Returns an mutable reference to the value in the `OrderedMap` associated with `key` if
+    /// it exists and `None` otherwise.
     pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
     where
         K: Borrow<Q>,
@@ -174,6 +184,8 @@ impl<K: Ord, V> OrderedMap<K, V> {
         }
     }
 
+    /// Inserts a key-value (`key`, `value`) pair into the `OrderedMap` and returns the previous
+    /// value associated with `key` if it exists and `None` otherwise.
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         match self.keys.binary_search(&key) {
             Ok(index) => {
@@ -188,6 +200,8 @@ impl<K: Ord, V> OrderedMap<K, V> {
         }
     }
 
+    /// Removes `key` from the `OrderedMap` and returns the value associated with `key` in the
+    /// `OrderedMap` if `key` existed in it and `None` otherwise.
     pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,
@@ -202,6 +216,8 @@ impl<K: Ord, V> OrderedMap<K, V> {
         }
     }
 
+    /// Removes `key` from the `OrderedMap` and returns the key-value pair associated with `key` in the
+    /// `OrderedMap` if `key` existed in it and `None` otherwise.
     pub fn remove_entry<Q>(&mut self, key: &Q) -> Option<(K, V)>
     where
         K: Borrow<Q>,

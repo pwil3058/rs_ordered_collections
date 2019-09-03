@@ -1,5 +1,6 @@
 use crate::OrderedMap;
 
+/// The data associated with an occupied `Entry`.
 pub struct OccupiedEntry<'a, K: Ord, V> {
     key: K,
     index: usize,
@@ -20,6 +21,7 @@ impl<'a, K: 'a + Ord, V: 'a> OccupiedEntry<'a, K, V> {
     }
 }
 
+/// The data associated with a vacant `Entry`.
 pub struct VacantEntry<'a, K: Ord, V> {
     key: K,
     index: usize,
@@ -38,12 +40,15 @@ impl<'a, K: 'a + Ord, V: 'a> VacantEntry<'a, K, V> {
     }
 }
 
+/// A view into a single entry in an `OrderedMap` which may be vacant or occupied.
 pub enum Entry<'a, K: 'a + Ord, V: 'a> {
     Occupied(OccupiedEntry<'a, K, V>),
     Vacant(VacantEntry<'a, K, V>),
 }
 
 impl<'a, K: Ord, V> Entry<'a, K, V> {
+    /// Ensures the `Entry` is occupied by inserting `default` if necessary and returns a
+    /// mutable reference to the value in the entry.
     pub fn or_insert(self, default: V) -> &'a mut V {
         match self {
             Entry::Occupied(entry) => entry.into_mut(),
@@ -51,6 +56,8 @@ impl<'a, K: Ord, V> Entry<'a, K, V> {
         }
     }
 
+    /// Ensures the `Entry` is occupied by inserting the result obtained by running `default()`
+    /// if necessary and returns a mutable reference to the value in the entry.
     pub fn or_insert_with<F: FnOnce() -> V>(self, default: F) -> &'a mut V {
         match self {
             Entry::Occupied(entry) => entry.into_mut(),
@@ -58,6 +65,7 @@ impl<'a, K: Ord, V> Entry<'a, K, V> {
         }
     }
 
+    /// Returns a reference to the entry's key.
     pub fn key(&self) -> &K {
         match self {
             Entry::Occupied(entry) => entry.key(),
@@ -65,6 +73,8 @@ impl<'a, K: Ord, V> Entry<'a, K, V> {
         }
     }
 
+    /// Provides in-place mutable access to an occupied entry before any potential inserts
+    /// into the `OrderedMap`.
     pub fn and_modify<F>(mut self, modify: F) -> Self
     where
         F: FnOnce(&mut V),
@@ -86,6 +96,8 @@ impl<'a, K: Ord, V: Default> Entry<'a, K, V> {
 }
 
 impl<K: Ord, V> OrderedMap<K, V> {
+    /// Gets the `Entry` in the `OrderedMap` associated with `key` for
+    /// in-place manipulation.
     pub fn entry(&mut self, key: K) -> Entry<'_, K, V> {
         match self.keys.binary_search(&key) {
             Ok(index) => {
