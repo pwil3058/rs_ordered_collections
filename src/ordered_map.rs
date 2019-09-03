@@ -230,9 +230,14 @@ impl<K: Ord, V> OrderedMap<K, V> {
     }
 }
 
-/// Convert to `OrderedMap<K, V>` from a `Vec<(K, V)>`
+/// Convert to `OrderedMap<K, V>` from a `Vec<(K, V)>`. If duplicate keys are present
+/// the last value for the key in the `Vec` is used.
 impl<K: Ord, V> From<Vec<(K, V)>> for OrderedMap<K, V> {
     fn from(mut list: Vec<(K, V)>) -> Self {
+        // sorting list first should make insertion equivalent to a push()
+        // use stable sort so that (in the event of duplicate keys) order
+        // is retained and the last value specified is used
+        list.sort_by(|a, b| a.0.cmp(&b.0));
         let mut map = Self::default();
         for (key, value) in list.drain(..) {
             map.insert(key, value);
@@ -241,14 +246,11 @@ impl<K: Ord, V> From<Vec<(K, V)>> for OrderedMap<K, V> {
     }
 }
 
-/// Convert to `OrderedMap<K, V>` from a borrowed `Vec<(K, V)>`
+/// Convert to `OrderedMap<K, V>` from a borrowed `Vec<(K, V)>`. If duplicate keys are present
+/// the last value for the key in the slice is used.
 impl<K: Ord + Clone, V: Clone> From<&[(K, V)]> for OrderedMap<K, V> {
     fn from(list: &[(K, V)]) -> Self {
-        let mut map = Self::default();
-        for (key, value) in list.iter() {
-            map.insert(key.clone(), value.clone());
-        }
-        map
+        list.to_vec().into()
     }
 }
 

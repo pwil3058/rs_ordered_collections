@@ -168,7 +168,7 @@ impl<T: Ord> Default for OrderedSet<T> {
 impl<T: Ord + Clone> From<&[T]> for OrderedSet<T> {
     fn from(list: &[T]) -> Self {
         let mut vec = list.to_vec();
-        vec.sort();
+        vec.sort_unstable();
         vec.dedup();
         Self { members: vec }
     }
@@ -177,7 +177,7 @@ impl<T: Ord + Clone> From<&[T]> for OrderedSet<T> {
 /// Convert to OrderedSet<T> from a slice of elements
 impl<T: Ord + Clone> From<Vec<T>> for OrderedSet<T> {
     fn from(mut vec: Vec<T>) -> Self {
-        vec.sort();
+        vec.sort_unstable();
         vec.dedup();
         Self { members: vec }
     }
@@ -185,25 +185,19 @@ impl<T: Ord + Clone> From<Vec<T>> for OrderedSet<T> {
 
 impl<T: Ord> FromIterator<T> for OrderedSet<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let mut ordered_set = OrderedSet::<T>::default();
-
-        for i in iter {
-            ordered_set.insert(i);
-        }
-
-        ordered_set
+        let mut members: Vec<T> = iter.into_iter().collect();
+        members.sort_unstable();
+        members.dedup();
+        Self { members }
     }
 }
 
 impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for OrderedSet<T> {
     fn from_iter<I: IntoIterator<Item = &'a T>>(iter: I) -> Self {
-        let mut ordered_set = OrderedSet::<T>::default();
-
-        for i in iter.into_iter().cloned() {
-            ordered_set.insert(i);
-        }
-
-        ordered_set
+        let mut members: Vec<T> = iter.into_iter().cloned().collect();
+        members.sort_unstable();
+        members.dedup();
+        Self { members }
     }
 }
 
