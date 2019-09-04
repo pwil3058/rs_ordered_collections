@@ -246,6 +246,15 @@ macro_rules! define_set_operation {
             }
         }
 
+        impl<T: Ord + Clone> $op<SetIter<'_, T>> for &OrderedSet<T> {
+            type Output = OrderedSet<T>;
+
+            #[$op_doc]
+            fn $op_fn(self, other: SetIter<T>) -> Self::Output {
+                $iter::new(self.iter(), other).to_set()
+            }
+        }
+
         impl<T: Ord + Clone> $opa for OrderedSet<T> {
             #[$opa_doc]
             fn $opa_fn(&mut self, other: Self) {
@@ -257,6 +266,13 @@ macro_rules! define_set_operation {
             #[$opa_doc]
             fn $opa_fn(&mut self, other: &Self) {
                 self.members = self.$function(other).to_list();
+            }
+        }
+
+        impl<T: Ord + Clone> $opa<SetIter<'_, T>> for OrderedSet<T> {
+            #[$opa_doc]
+            fn $opa_fn(&mut self, other: SetIter<'_, T>) {
+                self.members = $iter::new(self.iter(), other).to_list();
             }
         }
     };
@@ -607,6 +623,9 @@ mod tests {
         let result = &str_set1 - &str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
+        let result = &str_set1 - str_set2.iter();
+        assert!(result.is_valid());
+        assert_eq!(expected, result);
         let result = str_set1 - str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
@@ -619,6 +638,10 @@ mod tests {
         let set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         let set3: OrderedSet<String> = TEST_STRS[0..4].into_iter().map(|s| s.to_string()).collect();
         set1 -= &set2;
+        assert_eq!(set1, set3);
+        let mut set1: OrderedSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        set1 -= set2.iter();
         assert_eq!(set1, set3);
         let mut set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
@@ -640,6 +663,9 @@ mod tests {
         let result = &str_set1 ^ &str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
+        let result = &str_set1 ^ str_set2.iter();
+        assert!(result.is_valid());
+        assert_eq!(expected, result);
         let result = str_set1 ^ str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
@@ -659,6 +685,10 @@ mod tests {
         assert_eq!(set1, set3);
         let mut set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        set1 ^= set2.iter();
+        assert_eq!(set1, set3);
+        let mut set1: OrderedSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
         set1 ^= set2;
         assert_eq!(set1, set3);
     }
@@ -674,6 +704,9 @@ mod tests {
         let result = &str_set1 | &str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
+        let result = &str_set1 | str_set2.iter();
+        assert!(result.is_valid());
+        assert_eq!(expected, result);
         let result = str_set1 | str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
@@ -686,6 +719,10 @@ mod tests {
         let set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         let set3: OrderedSet<String> = TEST_STRS[0..].into_iter().map(|s| s.to_string()).collect();
         set1 |= &set2;
+        assert_eq!(set1, set3);
+        let mut set1: OrderedSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        set1 |= set2.iter();
         assert_eq!(set1, set3);
         let mut set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
@@ -704,6 +741,9 @@ mod tests {
         let result = &str_set1 & &str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
+        let result = &str_set1 & str_set2.iter();
+        assert!(result.is_valid());
+        assert_eq!(expected, result);
         let result = str_set1 & str_set2;
         assert!(result.is_valid());
         assert_eq!(expected, result);
@@ -716,6 +756,10 @@ mod tests {
         let set2: OrderedSet<String> = TEST_STRS[4..].into_iter().map(|s| s.to_string()).collect();
         let set3: OrderedSet<String> = TEST_STRS[4..8].into_iter().map(|s| s.to_string()).collect();
         set1 &= &set2;
+        assert_eq!(set1, set3);
+        let mut set1: OrderedSet<String> =
+            TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
+        set1 &= set2.iter();
         assert_eq!(set1, set3);
         let mut set1: OrderedSet<String> =
             TEST_STRS[0..8].into_iter().map(|s| s.to_string()).collect();
