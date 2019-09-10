@@ -164,6 +164,24 @@ impl<T: Ord> Default for OrderedSet<T> {
     }
 }
 
+impl<'a, T: Ord> IntoIterator for &'a OrderedSet<T> {
+    type Item = &'a T;
+    type IntoIter = SetIter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<T: Ord> IntoIterator for OrderedSet<T> {
+    type Item = T;
+    type IntoIter = ::std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.members.into_iter()
+    }
+}
+
 /// Convert to OrderedSet<T> from a slice of elements
 impl<T: Ord + Clone> From<&[T]> for OrderedSet<T> {
     fn from(list: &[T]) -> Self {
