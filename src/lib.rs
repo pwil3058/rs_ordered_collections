@@ -5,11 +5,7 @@
 macro_rules! ordered_set {
     ( $( $x:expr ),* ) => {
         {
-            let mut set = OrderedSet::new();
-            $(
-                set.insert($x);
-            )*
-            set
+            OrderedSet::from(vec![ $( $x ),*])
         }
     }
 }
@@ -70,10 +66,10 @@ where
 }
 
 fn range_indices<T, K, R>(members: &[T], range: R) -> (usize, usize)
-    where
-        K: Ord + Sized,
-        R: std::ops::RangeBounds<K>,
-        T: Ord + std::borrow::Borrow<K>,
+where
+    K: Ord + Sized,
+    R: std::ops::RangeBounds<K>,
+    T: Ord + std::borrow::Borrow<K>,
 {
     let start_index = lower_bound_index(members, range.start_bound());
     let end_index = upper_bound_index(members, range.end_bound());
