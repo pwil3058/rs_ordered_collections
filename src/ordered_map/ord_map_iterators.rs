@@ -191,12 +191,12 @@ where
         loop {
             if let Some(l_key) = self.l_iter.peek_key() {
                 if let Some(r_key) = self.r_iter.peek() {
-                    match l_key.cmp(&r_key) {
+                    match l_key.cmp(r_key) {
                         Ordering::Less => {
                             return self.l_iter.next();
                         }
                         Ordering::Greater => {
-                            self.r_iter.advance_until(&l_key);
+                            self.r_iter.advance_until(l_key);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -235,12 +235,12 @@ where
         loop {
             if let Some(l_key) = self.l_iter.peek_key() {
                 if let Some(r_item) = self.r_iter.peek() {
-                    match l_key.cmp(&r_item) {
+                    match l_key.cmp(r_item) {
                         Ordering::Less => {
                             return Some(l_key);
                         }
                         Ordering::Greater => {
-                            self.r_iter.advance_until(&l_key);
+                            self.r_iter.advance_until(l_key);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -284,12 +284,12 @@ where
         loop {
             if let Some(l_key) = self.l_iter.peek_key() {
                 if let Some(r_item) = self.r_iter.peek() {
-                    match l_key.cmp(&r_item) {
+                    match l_key.cmp(r_item) {
                         Ordering::Less => {
-                            self.l_iter.advance_until_key(&r_item);
+                            self.l_iter.advance_until_key(r_item);
                         }
                         Ordering::Greater => {
-                            self.r_iter.advance_until(&l_key);
+                            self.r_iter.advance_until(l_key);
                         }
                         Ordering::Equal => {
                             self.r_iter.next();
@@ -328,12 +328,12 @@ where
         loop {
             if let Some(l_key) = self.l_iter.peek_key() {
                 if let Some(r_item) = self.r_iter.peek() {
-                    match l_key.cmp(&r_item) {
+                    match l_key.cmp(r_item) {
                         Ordering::Less => {
-                            self.l_iter.advance_until_key(&r_item);
+                            self.l_iter.advance_until_key(r_item);
                         }
                         Ordering::Greater => {
-                            self.r_iter.advance_until(&l_key);
+                            self.r_iter.advance_until(l_key);
                         }
                         Ordering::Equal => {
                             return Some(l_key);
@@ -488,12 +488,12 @@ where
         loop {
             if let Some(l_key) = self.l_iter.peek_key() {
                 if let Some(r_item) = self.r_iter.peek() {
-                    match l_key.cmp(&r_item) {
+                    match l_key.cmp(r_item) {
                         Ordering::Less => {
                             return self.l_iter.next();
                         }
                         Ordering::Greater => {
-                            self.r_iter.advance_until(&l_key);
+                            self.r_iter.advance_until(l_key);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -533,12 +533,12 @@ where
         loop {
             if let Some(l_key) = self.l_iter.peek_key() {
                 if let Some(r_item) = self.r_iter.peek() {
-                    match l_key.cmp(&r_item) {
+                    match l_key.cmp(r_item) {
                         Ordering::Less => {
                             return Some(l_key);
                         }
                         Ordering::Greater => {
-                            self.r_iter.advance_until(&l_key);
+                            self.r_iter.advance_until(l_key);
                         }
                         Ordering::Equal => {
                             self.l_iter.next();
@@ -574,12 +574,12 @@ where
         loop {
             if let Some(l_key) = self.l_iter.peek_key() {
                 if let Some(r_item) = self.r_iter.peek() {
-                    match l_key.cmp(&r_item) {
+                    match l_key.cmp(r_item) {
                         Ordering::Less => {
-                            self.l_iter.advance_until_key(&r_item);
+                            self.l_iter.advance_until_key(r_item);
                         }
                         Ordering::Greater => {
-                            self.r_iter.advance_until(&l_key);
+                            self.r_iter.advance_until(l_key);
                         }
                         Ordering::Equal => {
                             self.r_iter.next();
@@ -619,12 +619,12 @@ where
         loop {
             if let Some(l_key) = self.l_iter.peek_key() {
                 if let Some(r_item) = self.r_iter.peek() {
-                    match l_key.cmp(&r_item) {
+                    match l_key.cmp(r_item) {
                         Ordering::Less => {
-                            self.l_iter.advance_until_key(&r_item);
+                            self.l_iter.advance_until_key(r_item);
                         }
                         Ordering::Greater => {
-                            self.r_iter.advance_until(&l_key);
+                            self.r_iter.advance_until(l_key);
                         }
                         Ordering::Equal => {
                             return Some(l_key);
@@ -811,7 +811,7 @@ where
         loop {
             if let Some(l_key) = self.l_iter.peek_key() {
                 if let Some(r_key) = self.r_iter.peek_key() {
-                    match l_key.cmp(&r_key) {
+                    match l_key.cmp(r_key) {
                         Ordering::Less => {
                             return self.l_iter.next();
                         }
@@ -854,19 +854,19 @@ where
     fn peek_key(&mut self) -> Option<&'a K> {
         if let Some(l_key) = self.l_iter.peek_key() {
             if let Some(r_key) = self.r_iter.peek_key() {
-                match l_key.cmp(&r_key) {
+                match l_key.cmp(r_key) {
                     Ordering::Less | Ordering::Equal => {
-                        return Some(l_key);
+                        Some(l_key)
                     }
                     Ordering::Greater => {
-                        return Some(r_key);
+                        Some(r_key)
                     }
                 }
             } else {
-                return Some(l_key);
+                Some(l_key)
             }
         } else {
-            return self.r_iter.peek_key();
+            self.r_iter.peek_key()
         }
     }
 }
@@ -986,7 +986,7 @@ where
         loop {
             if let Some(l_key) = self.l_iter.peek_key() {
                 if let Some(r_key) = self.r_iter.peek_key() {
-                    match l_key.cmp(&r_key) {
+                    match l_key.cmp(r_key) {
                         Ordering::Less => {
                             return self.l_iter.next();
                         }
@@ -1030,19 +1030,19 @@ where
     fn peek_key(&mut self) -> Option<&'a K> {
         if let Some(l_key) = self.l_iter.peek_key() {
             if let Some(r_key) = self.r_iter.peek_key() {
-                match l_key.cmp(&r_key) {
+                match l_key.cmp(r_key) {
                     Ordering::Less | Ordering::Equal => {
-                        return Some(l_key);
+                        Some(l_key)
                     }
                     Ordering::Greater => {
-                        return Some(r_key);
+                        Some(r_key)
                     }
                 }
             } else {
-                return Some(l_key);
+                Some(l_key)
             }
         } else {
-            return self.r_iter.peek_key();
+            self.r_iter.peek_key()
         }
     }
 }
