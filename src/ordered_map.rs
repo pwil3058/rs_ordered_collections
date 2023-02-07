@@ -254,7 +254,7 @@ impl<'a, K: Ord + Clone, V: Clone> From<Vec<(&'a K, &'a V)>> for OrderedMap<K, V
         // sorting list first should make insertion equivalent to a push()
         // use stable sort so that (in the event of duplicate keys) order
         // is retained and the last value specified is used
-        list.sort_by(|a, b| a.0.cmp(&b.0));
+        list.sort_by(|a, b| a.0.cmp(b.0));
         let mut map = Self::default();
         for (key, value) in list.drain(..) {
             map.insert(key.clone(), value.clone());
