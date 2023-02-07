@@ -45,7 +45,7 @@ where
     /// Create a `Vec<T>` list from the elements in the 'Iterator`'s output
     fn to_list(&self) -> Vec<T> where Self: Sized {
         let clone = self.clone();
-        clone.map(|a| a.clone()).collect()
+        clone.cloned().collect()
     }
 }
 
@@ -54,7 +54,7 @@ where
     T: 'a + Ord + Clone,
 {
     /// Create a OrderedSet<T> from the elements in the Iterator's output
-    fn to_set(&mut self) -> OrderedSet<T> where Self: Sized {
+    fn to_set(&self) -> OrderedSet<T> where Self: Sized {
         OrderedSet::<T> {
             members: self.to_list(),
         }
@@ -82,6 +82,9 @@ where
     type Item = &'a T;
 
      fn next(&mut self) -> Option<Self::Item> {
+         // using "self.iter.by_ref().find(|&element| (self.predicate)(&element))"
+         // fails because of self.predicate in closure
+         #[allow(clippy::manual_find)]
          for element in self.iter.by_ref() {
              if (self.predicate)(&element) {
                  return Some(element);
@@ -259,32 +262,32 @@ where
 
     /// Is the output of the given Iterator disjoint from the output of
     /// this iterator?
-    fn is_disjoint<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
-        are_disjoint(self, iter)
+    fn is_disjoint<I: SkipAheadIterator<'a, T>>(&self, iter: &I) -> bool {
+        are_disjoint(self.clone(), iter.clone())
     }
 
     /// Is the output of the given Iterator a proper subset of the output of
     /// this iterator?
-    fn is_proper_subset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
-        a_proper_superset_b(self, iter)
+    fn is_proper_subset<I: SkipAheadIterator<'a, T>>(&self, iter: &I) -> bool {
+        a_proper_superset_b(self.clone(), iter.clone())
     }
 
     /// Is the output of the given Iterator a proper superset of the output of
     /// this iterator?
-    fn is_proper_superset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
-        a_proper_superset_b(iter, self)
+    fn is_proper_superset<I: SkipAheadIterator<'a, T>>(&self, iter: &I) -> bool {
+        a_proper_superset_b(iter.clone(), self.clone())
     }
 
     /// Is the output of the given Iterator a subset of the output of
     /// this iterator?
-    fn is_subset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
-        a_superset_b(self, iter)
+    fn is_subset<I: SkipAheadIterator<'a, T>>(&self, iter: &I) -> bool {
+        a_superset_b(self.clone(), iter.clone())
     }
 
     /// Is the output of the given Iterator a superset of the output of
     /// this iterator?
-    fn is_superset<I: SkipAheadIterator<'a, T>>(self, iter: I) -> bool {
-        a_superset_b(iter, self)
+    fn is_superset<I: SkipAheadIterator<'a, T>>(&self, iter: &I) -> bool {
+        a_superset_b(iter.clone(), self.clone())
     }
 }
 
