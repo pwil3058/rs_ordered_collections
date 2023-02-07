@@ -175,7 +175,7 @@ impl<'a, T: Ord> IntoIterator for &'a OrderedSet<T> {
 
 impl<T: Ord> IntoIterator for OrderedSet<T> {
     type Item = T;
-    type IntoIter = ::std::vec::IntoIter<Self::Item>;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.members.into_iter()
@@ -224,13 +224,13 @@ impl<'a, T: 'a + Ord + std::fmt::Display> std::fmt::Display for OrderedSet<T> {
         let mut string = "Set{".to_string();
         for (index, item) in self.members.iter().enumerate() {
             if index == 0 {
-                string += &format!("{}", item);
+                string += &format!("{item}");
             } else {
-                string += &format!(", {}", item);
+                string += &format!(", {item}");
             }
         }
         string += "}";
-        write!(f, "{}", string)
+        write!(f, "{string}")
     }
 }
 
