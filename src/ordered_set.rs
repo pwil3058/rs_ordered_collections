@@ -18,11 +18,11 @@ use self::ord_set_iterators::{
 
 /// An set of items of type T ordered according to Ord (with no duplicates)
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct OrderedSet<T: Ord> {
+pub struct OrderedSet<T: Ord + Clone> {
     pub(crate) members: Vec<T>,
 }
 
-impl<T: Ord> OrderedSet<T> {
+impl<T: Ord + Clone> OrderedSet<T> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -158,13 +158,13 @@ impl<T: Ord> OrderedSet<T> {
     }
 }
 
-impl<T: Ord> Default for OrderedSet<T> {
+impl<T: Ord + Clone> Default for OrderedSet<T> {
     fn default() -> Self {
         Self { members: vec![] }
     }
 }
 
-impl<'a, T: Ord> IntoIterator for &'a OrderedSet<T> {
+impl<'a, T: Ord + Clone> IntoIterator for &'a OrderedSet<T> {
     type Item = &'a T;
     type IntoIter = SetIter<'a, T>;
 
@@ -173,7 +173,7 @@ impl<'a, T: Ord> IntoIterator for &'a OrderedSet<T> {
     }
 }
 
-impl<T: Ord> IntoIterator for OrderedSet<T> {
+impl<T: Ord + Clone> IntoIterator for OrderedSet<T> {
     type Item = T;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
@@ -201,7 +201,7 @@ impl<T: Ord + Clone> From<Vec<T>> for OrderedSet<T> {
     }
 }
 
-impl<T: Ord> FromIterator<T> for OrderedSet<T> {
+impl<T: Ord + Clone> FromIterator<T> for OrderedSet<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         let mut members: Vec<T> = iter.into_iter().collect();
         members.sort_unstable();
@@ -219,7 +219,7 @@ impl<'a, T: 'a + Ord + Clone> FromIterator<&'a T> for OrderedSet<T> {
     }
 }
 
-impl<'a, T: 'a + Ord + std::fmt::Display> std::fmt::Display for OrderedSet<T> {
+impl<'a, T: 'a + Ord + std::fmt::Display + Clone> std::fmt::Display for OrderedSet<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut string = "Set{".to_string();
         for (index, item) in self.members.iter().enumerate() {
@@ -236,7 +236,7 @@ impl<'a, T: 'a + Ord + std::fmt::Display> std::fmt::Display for OrderedSet<T> {
 
 macro_rules! define_set_operation {
     ( $iter:ident, $fn_doc:meta, $function:ident, $op_doc:meta, $op:ident, $op_fn:ident, $opa_doc:meta, $opa:ident, $opa_fn:ident, ) => {
-        impl<T: Ord> OrderedSet<T> {
+        impl<T: Ord + Clone> OrderedSet<T> {
             #[$fn_doc]
             pub fn $function<'a>(
                 &'a self,

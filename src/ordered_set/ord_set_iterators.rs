@@ -25,7 +25,7 @@ use crate::OrderedSet;
 /// Iterator enhancement to provide peek and advance ahead features. This mechanism
 /// is used to optimise implementation of set operation (difference, intersection, etc)
 /// iterators.
-pub trait SkipAheadIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
+pub trait SkipAheadIterator<'a, T: 'a + Ord + Clone>: Iterator<Item = &'a T> + Clone{
     /// Peek at the next item in the iterator without advancing the iterator.
     fn peek(&mut self) -> Option<&'a T>;
 
@@ -38,13 +38,14 @@ pub trait SkipAheadIterator<'a, T: 'a + Ord>: Iterator<Item = &'a T> {
     fn advance_until(&mut self, t: &T) -> &mut Self;
 }
 
-pub trait ToList<'a, T>: Iterator<Item = &'a T>
+pub trait ToList<'a, T>: Iterator<Item = &'a T> + Clone
 where
     T: 'a + Clone,
 {
     /// Create a `Vec<T>` list from the elements in the 'Iterator`'s output
-    fn to_list(&mut self) -> Vec<T> {
-        self.cloned().collect()
+    fn to_list(&self) -> Vec<T> where Self: Sized {
+        let clone = self.clone();
+        clone.map(|a| a.clone()).collect()
     }
 }
 
@@ -53,7 +54,7 @@ where
     T: 'a + Ord + Clone,
 {
     /// Create a OrderedSet<T> from the elements in the Iterator's output
-    fn to_set(&mut self) -> OrderedSet<T> {
+    fn to_set(&mut self) -> OrderedSet<T> where Self: Sized {
         OrderedSet::<T> {
             members: self.to_list(),
         }
@@ -61,6 +62,7 @@ where
 }
 
 // SELECTION ITERATOR
+#[derive(Clone)]
 pub struct Selector<'a, T, I, P>
 where
     T: 'a + Ord,
@@ -92,16 +94,16 @@ where
 impl<'a, T, I, P> ToList<'a, T> for Selector<'a, T, I, P>
 where
     T: 'a + Ord + Clone,
-    I: Iterator<Item = &'a T>,
-    P: FnMut(&I::Item) -> bool,
+    I: Iterator<Item = &'a T> + Clone,
+    P: FnMut(&I::Item) -> bool + Clone,
 {
 }
 
 impl<'a, T, I, P> ToSet<'a, T> for Selector<'a, T, I, P>
 where
     T: 'a + Ord + Clone,
-    I: Iterator<Item = &'a T>,
-    P: FnMut(&I::Item) -> bool,
+    I: Iterator<Item = &'a T> + Clone,
+    P: FnMut(&I::Item) -> bool + Clone,
 {
 }
 
@@ -124,6 +126,7 @@ where
 // SET ITERATOR
 
 /// An Iterator over the elements in an ordered list
+#[derive(Clone)]
 pub struct SetIter<'a, T: Ord> {
     elements: &'a [T],
     index: usize,
@@ -148,7 +151,7 @@ impl<'a, T: Ord> Iterator for SetIter<'a, T> {
     }
 }
 
-impl<'a, T: 'a + Ord> SkipAheadIterator<'a, T> for SetIter<'a, T> {
+impl<'a, T: 'a + Ord + Clone> SkipAheadIterator<'a, T> for SetIter<'a, T> {
     fn advance_past(&mut self, t: &T) -> &mut Self {
         self.index += after_index!(self.elements[self.index..], t);
         self
@@ -176,7 +179,7 @@ macro_rules! impl_op_for_set_iter {
     ( $op:ident, $op_fn:ident, $output:ident, $doc:meta ) => {
         impl<'a, T, I> $op<I> for SetIter<'a, T>
         where
-            T: Ord,
+            T: Ord + Clone,
             Self: Sized,
             I: SkipAheadIterator<'a, T>,
         {
@@ -225,7 +228,7 @@ impl_op_for_set_iter!(
 
 pub trait IterSetOperations<'a, T>: SkipAheadIterator<'a, T> + Sized
 where
-    T: 'a + Ord,
+    T: 'a + Ord + Clone,
 {
     /// Iterate over the set union of this Iterator and the given Iterator
     /// in the order defined by their elements `Ord` trait implementation.
@@ -288,7 +291,7 @@ where
 /// The contents of the two iterators are disjoint
 pub(crate) fn are_disjoint<'a, T, L, R>(mut l_iter: L, mut r_iter: R) -> bool
 where
-    T: 'a + Ord,
+    T: 'a + Ord + Clone,
     L: SkipAheadIterator<'a, T>,
     R: SkipAheadIterator<'a, T>,
 {
@@ -318,7 +321,7 @@ where
 /// The contents of Iterator "a" are a superset of the contents of "b"
 pub(crate) fn a_superset_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
 where
-    T: 'a + Ord,
+    T: 'a + Ord + Clone,
     A: SkipAheadIterator<'a, T>,
     B: SkipAheadIterator<'a, T>,
 {
@@ -346,7 +349,7 @@ where
 /// The contents of Iterator "a" are a proper superset of the contents of "b"
 pub(crate) fn a_proper_superset_b<'a, T, A, B>(mut a_iter: A, mut b_iter: B) -> bool
 where
-    T: 'a + Ord,
+    T: 'a + Ord + Clone,
     A: SkipAheadIterator<'a, T>,
     B: SkipAheadIterator<'a, T>,
 {
@@ -377,7 +380,7 @@ macro_rules! impl_op_for_iterator {
     ( $iterator:ident, $op:ident, $op_fn:ident, $output:ident, $doc:meta, ) => {
         impl<'a, T, L, R, I> $op<I> for $iterator<'a, T, L, R>
         where
-            T: Ord,
+            T: Ord + Clone,
             Self: Sized,
             L: SkipAheadIterator<'a, T>,
             R: SkipAheadIterator<'a, T>,
@@ -396,9 +399,10 @@ macro_rules! impl_op_for_iterator {
 macro_rules! define_set_op_iterator {
     ( $doc:meta, $iter:ident ) => {
         #[$doc]
+        #[derive(Clone)]
         pub struct $iter<'a, T, L, R>
         where
-            T: Ord,
+            T: Ord + Clone,
             L: SkipAheadIterator<'a, T>,
             R: SkipAheadIterator<'a, T>,
         {
@@ -409,7 +413,7 @@ macro_rules! define_set_op_iterator {
 
         impl<'a, T, L, R> $iter<'a, T, L, R>
         where
-            T: 'a + Ord,
+            T: 'a + Ord + Clone,
             L: SkipAheadIterator<'a, T>,
             R: SkipAheadIterator<'a, T>,
         {
@@ -448,7 +452,7 @@ macro_rules! define_set_op_iterator {
 
         impl<'a, T, L, R> IterSetOperations<'a, T> for $iter<'a, T, L, R>
         where
-            T: 'a + Ord,
+            T: 'a + Ord + Clone,
             L: SkipAheadIterator<'a, T>,
             R: SkipAheadIterator<'a, T>,
         {
@@ -504,7 +508,7 @@ define_set_op_iterator!(
 
 impl<'a, T, L, R> Iterator for Union<'a, T, L, R>
 where
-    T: 'a + Ord,
+    T: 'a + Ord + Clone,
     L: SkipAheadIterator<'a, T>,
     R: SkipAheadIterator<'a, T>,
 {
@@ -536,7 +540,7 @@ where
 
 impl<'a, T, L, R> SkipAheadIterator<'a, T> for Union<'a, T, L, R>
 where
-    T: 'a + Ord,
+    T: 'a + Ord + Clone,
     L: SkipAheadIterator<'a, T>,
     R: SkipAheadIterator<'a, T>,
 {
@@ -580,7 +584,7 @@ define_set_op_iterator!(
 
 impl<'a, T, L, R> Iterator for Intersection<'a, T, L, R>
 where
-    T: 'a + Ord,
+    T: 'a + Ord + Clone,
     L: SkipAheadIterator<'a, T>,
     R: SkipAheadIterator<'a, T>,
 {
@@ -614,7 +618,7 @@ where
 
 impl<'a, T, L, R> SkipAheadIterator<'a, T> for Intersection<'a, T, L, R>
 where
-    T: 'a + Ord,
+    T: 'a + Ord + Clone,
     L: SkipAheadIterator<'a, T>,
     R: SkipAheadIterator<'a, T>,
 {
@@ -663,7 +667,7 @@ Iterators whose (individual) output is ordered and contains no duplicates.",
 
 impl<'a, T, L, R> Iterator for Difference<'a, T, L, R>
 where
-    T: 'a + Ord,
+    T: 'a + Ord + Clone,
     L: SkipAheadIterator<'a, T>,
     R: SkipAheadIterator<'a, T>,
 {
@@ -697,7 +701,7 @@ where
 
 impl<'a, T, L, R> SkipAheadIterator<'a, T> for Difference<'a, T, L, R>
 where
-    T: 'a + Ord,
+    T: 'a + Ord + Clone,
     L: SkipAheadIterator<'a, T>,
     R: SkipAheadIterator<'a, T>,
 {
@@ -747,7 +751,7 @@ Iterators whose (individual) output is ordered and contains no duplicates.",
 
 impl<'a, T, L, R> Iterator for SymmetricDifference<'a, T, L, R>
 where
-    T: 'a + Ord,
+    T: 'a + Ord + Clone,
     L: SkipAheadIterator<'a, T>,
     R: SkipAheadIterator<'a, T>,
 {
@@ -781,7 +785,7 @@ where
 
 impl<'a, T, L, R> SkipAheadIterator<'a, T> for SymmetricDifference<'a, T, L, R>
 where
-    T: 'a + Ord,
+    T: 'a + Ord + Clone,
     L: SkipAheadIterator<'a, T>,
     R: SkipAheadIterator<'a, T>,
 {
@@ -831,7 +835,7 @@ mod tests {
     // contains no duplicates.  Useful for testing.
     fn output_is_ordered_nodups<'a, T, I>(iter: &mut I) -> bool
     where
-        T: 'a + Ord,
+        T: 'a + Ord + Clone,
         I: SkipAheadIterator<'a, T>,
     {
         let mut o_previous = iter.next();
@@ -891,36 +895,36 @@ mod tests {
     #[test]
     fn iter_after_works() {
         let vec = LIST.to_vec();
-        let mut iter_after = SetIter::new(&LIST[after_index!(LIST, &"g")..]);
+        let iter_after = SetIter::new(&LIST[after_index!(LIST, &"g")..]);
         assert_eq!(iter_after.to_list(), vec[4..].to_vec());
-        let mut iter_after = SetIter::new(&LIST[after_index!(LIST, &"f")..]);
+        let iter_after = SetIter::new(&LIST[after_index!(LIST, &"f")..]);
         assert_eq!(iter_after.to_list(), vec[3..].to_vec());
     }
 
     #[test]
     fn iter_before_works() {
         let vec = LIST.to_vec();
-        let mut iter_before = SetIter::new(&LIST[..from_index!(LIST, &"g")]);
+        let iter_before = SetIter::new(&LIST[..from_index!(LIST, &"g")]);
         assert_eq!(iter_before.to_list(), vec[..3].to_vec());
-        let mut iter_before = SetIter::new(&LIST[..from_index!(LIST, &"f")]);
+        let iter_before = SetIter::new(&LIST[..from_index!(LIST, &"f")]);
         assert_eq!(iter_before.to_list(), vec[..3].to_vec());
     }
 
     #[test]
     fn iter_from_works() {
         let vec = LIST.to_vec();
-        let mut iter_from = SetIter::new(&LIST[from_index!(LIST, &"g")..]);
+        let iter_from = SetIter::new(&LIST[from_index!(LIST, &"g")..]);
         assert_eq!(iter_from.to_list(), vec[3..].to_vec());
-        let mut iter_from = SetIter::new(&LIST[from_index!(LIST, &"f")..]);
+        let iter_from = SetIter::new(&LIST[from_index!(LIST, &"f")..]);
         assert_eq!(iter_from.to_list(), vec[3..].to_vec());
     }
 
     #[test]
     fn iter_until_works() {
         let vec = LIST.to_vec();
-        let mut iter_until = SetIter::new(&LIST[..after_index!(LIST, &"g")]);
+        let iter_until = SetIter::new(&LIST[..after_index!(LIST, &"g")]);
         assert_eq!(iter_until.to_list(), vec[..4].to_vec());
-        let mut iter_until = SetIter::new(&LIST[..after_index!(LIST, &"f")]);
+        let iter_until = SetIter::new(&LIST[..after_index!(LIST, &"f")]);
         assert_eq!(iter_until.to_list(), vec[..3].to_vec());
     }
 

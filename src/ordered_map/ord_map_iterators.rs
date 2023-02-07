@@ -110,7 +110,7 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadMapIterator<'a, K, (&'a K, &'a V)> for Map
 
 impl<'a, K: Ord + Clone, V: Clone> ToMap<'a, K, V> for MapIter<'a, K, V> {}
 
-impl<'a, K: Ord, V> MapIterFilter<'a, K, V> for MapIter<'a, K, V> {}
+impl<'a, K: Ord + Clone, V> MapIterFilter<'a, K, V> for MapIter<'a, K, V> {}
 
 impl<'a, K, V> MapIterMerge<'a, K, V> for MapIter<'a, K, V>
 where
@@ -119,7 +119,7 @@ where
 {
 }
 
-pub trait MapIterFilter<'a, K: 'a + Ord, V: 'a>:
+pub trait MapIterFilter<'a, K: 'a + Ord + Clone, V: 'a>:
     SkipAheadMapIterator<'a, K, (&'a K, &'a V)> + Sized
 {
     /// Exclude keys in the given key iterator from the output stream.
@@ -138,7 +138,7 @@ macro_rules! define_mapiter_filter {
         #[$doc]
         pub struct $iter<'a, K, V, L, R>
         where
-            K: Ord,
+            K: Ord + Clone,
             L: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
             R: SkipAheadIterator<'a, K>,
         {
@@ -149,7 +149,7 @@ macro_rules! define_mapiter_filter {
 
         impl<'a, K, V, L, R> $iter<'a, K, V, L, R>
         where
-            K: Ord,
+            K: Ord + Clone,
             L: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
             R: SkipAheadIterator<'a, K>,
         {
@@ -181,7 +181,7 @@ define_mapiter_filter!(
 
 impl<'a, K, V, L, R> Iterator for MapIterExcept<'a, K, V, L, R>
 where
-    K: Ord,
+    K: Ord + Clone,
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
     R: SkipAheadIterator<'a, K>,
 {
@@ -215,7 +215,7 @@ where
 
 impl<'a, K, V, L, R> SkipAheadMapIterator<'a, K, (&'a K, &'a V)> for MapIterExcept<'a, K, V, L, R>
 where
-    K: 'a + Ord,
+    K: 'a + Ord + Clone,
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
     R: SkipAheadIterator<'a, K>,
 {
@@ -274,7 +274,7 @@ define_mapiter_filter!(
 
 impl<'a, K, V, L, R> Iterator for MapIterOnly<'a, K, V, L, R>
 where
-    K: Ord,
+    K: Ord + Clone,
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
     R: SkipAheadIterator<'a, K>,
 {
@@ -308,7 +308,7 @@ where
 
 impl<'a, K, V, L, R> SkipAheadMapIterator<'a, K, (&'a K, &'a V)> for MapIterOnly<'a, K, V, L, R>
 where
-    K: 'a + Ord,
+    K: 'a + Ord + Clone,
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a V)>,
     R: SkipAheadIterator<'a, K>,
 {
@@ -420,7 +420,7 @@ impl<'a, K: 'a + Ord, V: 'a> SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>
     }
 }
 
-pub trait MapIterMutFilter<'a, K: 'a + Ord, V: 'a>:
+pub trait MapIterMutFilter<'a, K: 'a + Ord + Clone, V: 'a>:
     SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)> + Sized
 {
     /// Exclude keys in the given key iterator from the output stream.
@@ -434,14 +434,15 @@ pub trait MapIterMutFilter<'a, K: 'a + Ord, V: 'a>:
     }
 }
 
-impl<'a, K: Ord, V> MapIterMutFilter<'a, K, V> for MapIterMut<'a, K, V> {}
+impl<'a, K: Ord + Clone, V> MapIterMutFilter<'a, K, V> for MapIterMut<'a, K, V> {}
 
 macro_rules! define_mapitermut_filter {
     ( $doc:meta, $iter:ident ) => {
         #[$doc]
+        #[derive(Clone)]
         pub struct $iter<'a, K, V, L, R>
         where
-            K: 'a + Ord,
+            K: 'a + Ord + Clone,
             V: 'a,
             L: SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>,
             R: SkipAheadIterator<'a, K>,
@@ -453,7 +454,7 @@ macro_rules! define_mapitermut_filter {
 
         impl<'a, K, V, L, R> $iter<'a, K, V, L, R>
         where
-            K: 'a + Ord,
+            K: 'a + Ord + Clone,
             V: 'a,
             L: SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>,
             R: SkipAheadIterator<'a, K>,
@@ -477,7 +478,7 @@ define_mapitermut_filter!(
 
 impl<'a, K, V, L, R> Iterator for MapIterMutExcept<'a, K, V, L, R>
 where
-    K: 'a + Ord,
+    K: 'a + Ord + Clone,
     V: 'a,
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>,
     R: SkipAheadIterator<'a, K>,
@@ -513,7 +514,7 @@ where
 impl<'a, K, V, L, R> SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>
     for MapIterMutExcept<'a, K, V, L, R>
 where
-    K: 'a + Ord,
+    K: 'a + Ord + Clone,
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>,
     R: SkipAheadIterator<'a, K>,
 {
@@ -563,7 +564,7 @@ define_mapitermut_filter!(
 
 impl<'a, K, V, L, R> Iterator for MapIterMutOnly<'a, K, V, L, R>
 where
-    K: 'a + Ord,
+    K: 'a + Ord + Clone,
     V: 'a,
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>,
     R: SkipAheadIterator<'a, K>,
@@ -599,7 +600,7 @@ where
 impl<'a, K, V, L, R> SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>
     for MapIterMutOnly<'a, K, V, L, R>
 where
-    K: 'a + Ord,
+    K: 'a + Ord + Clone,
     L: SkipAheadMapIterator<'a, K, (&'a K, &'a mut V)>,
     R: SkipAheadIterator<'a, K>,
 {
